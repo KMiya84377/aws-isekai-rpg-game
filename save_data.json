@@ -1,0 +1,1 @@
+{"player": {"name": "Rookie Engineer", "level": 1, "exp": 50, "hp": 88, "max_hp": 100, "mp": 50, "max_mp": 50, "attack": 10, "defense": 5, "credits": 1100, "position": [25, 25], "tile_x": 25, "tile_y": 25, "completed_quests": [], "defeated_bosses": [], "recruited_services": [], "inventory": []}, "party": [], "current_map": "AWS Cloud World", "position": [25, 25]}
