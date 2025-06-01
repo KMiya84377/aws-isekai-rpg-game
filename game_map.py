@@ -5,7 +5,7 @@ import random
 import math
 from fixed_maps import get_world_map, get_computing_town_map, get_storage_town_map, get_database_town_map, get_security_town_map
 
-# タイルタイプ
+# Tile types
 TILE_EMPTY = 0
 TILE_FLOOR = 1
 TILE_WALL = 2
@@ -24,6 +24,10 @@ TILE_BENCH = 14
 TILE_LAMP = 15
 TILE_SIGN = 16
 TILE_FLOWERBED = 17
+TILE_STATUE = 18
+TILE_TABLE = 19
+TILE_CHAIR = 20
+TILE_INN = 21  # Added inn tile type
 
 # マップタイプ
 MAP_WORLD = 0
@@ -688,29 +692,29 @@ class GameMap:
         """町の種類に応じてNPCを配置"""
         if "Computing" in self.name:
             # Computing Town - EC2, Lambda, Elastic Beanstalk
-            self.add_npc(15, 10, "EC2", "私はEC2、AWSの仮想サーバーサービスだ。柔軟なコンピューティングリソースが必要なら任せてくれ。")
-            self.add_npc(8, 15, "Lambda", "私はLambda、AWSのサーバーレスコンピューティングサービスだ。コードの実行なら私に任せてくれ。")
-            self.add_npc(22, 8, "Elastic Beanstalk", "私はElastic Beanstalk、アプリケーションのデプロイと管理を簡単にするサービスだ。")
+            self.add_npc(15, 10, "EC2", "I'm EC2, AWS's virtual server service. I can provide flexible computing resources for you.", True, "ec2")
+            self.add_npc(8, 15, "Lambda", "I'm Lambda, AWS's serverless computing service. Let me handle your code execution without infrastructure worries.", True, "lambda")
+            self.add_npc(22, 8, "Elastic Beanstalk", "I'm Elastic Beanstalk, a service that makes application deployment and management easy.", True, "beanstalk")
         elif "Storage" in self.name:
             # Storage Town - S3, EBS, Glacier
-            self.add_npc(15, 10, "S3", "私はS3、AWSのオブジェクトストレージサービスだ。データの保存なら私に任せてくれ。")
-            self.add_npc(8, 15, "EBS", "私はEBS、EC2インスタンス用の永続ブロックストレージだ。高性能なストレージが必要なら私を使ってくれ。")
-            self.add_npc(22, 8, "Glacier", "私はGlacier、長期保存用の低コストストレージだ。アーカイブデータの保存に最適だよ。")
+            self.add_npc(15, 10, "S3", "I'm S3, AWS's object storage service. I can store your data reliably.", True, "s3")
+            self.add_npc(8, 15, "EBS", "I'm EBS, persistent block storage for EC2 instances. Use me when you need high-performance storage.", True, "ebs")
+            self.add_npc(22, 8, "Glacier", "I'm Glacier, low-cost storage for long-term archiving. Perfect for data you don't need to access frequently.", True, "glacier")
         elif "Database" in self.name:
             # Database Town - DynamoDB, RDS, Aurora
-            self.add_npc(15, 10, "DynamoDB", "私はDynamoDB、AWSのNoSQLデータベースサービスだ。スケーラブルなデータ管理が必要なら任せてくれ。")
-            self.add_npc(8, 15, "RDS", "私はRDS、AWSのリレーショナルデータベースサービスだ。堅牢なデータ管理が必要なら任せてくれ。")
-            self.add_npc(22, 8, "Aurora", "私はAurora、高性能なMySQLおよびPostgreSQLと互換性のあるデータベースだ。")
+            self.add_npc(15, 10, "DynamoDB", "I'm DynamoDB, AWS's NoSQL database service. I can help you with scalable data management.", True, "dynamodb")
+            self.add_npc(8, 15, "RDS", "I'm RDS, AWS's relational database service. I provide robust data management capabilities.", True, "rds")
+            self.add_npc(22, 8, "Aurora", "I'm Aurora, a high-performance database compatible with MySQL and PostgreSQL.", True, "aurora")
         elif "Security" in self.name:
             # Security Town - IAM, CloudFront, Shield
-            self.add_npc(15, 10, "IAM", "私はIAM、AWSのアイデンティティ管理サービスだ。セキュアなアクセス制御が必要なら任せてくれ。")
-            self.add_npc(8, 15, "CloudFront", "私はCloudFront、AWSのCDNサービスだ。高速なコンテンツ配信が必要なら任せてくれ。")
-            self.add_npc(22, 8, "Shield", "私はShield、DDoS攻撃からの保護を提供するサービスだ。セキュリティを強化したいなら私を使ってくれ。")
+            self.add_npc(15, 10, "IAM", "I'm IAM, AWS's identity management service. I can help you with secure access control.", True, "iam")
+            self.add_npc(8, 15, "CloudFront", "I'm CloudFront, AWS's CDN service. I can help you deliver content quickly.", True, "cloudfront")
+            self.add_npc(22, 8, "Shield", "I'm Shield, a service that protects against DDoS attacks. Use me to enhance your security.", True, "shield")
         else:
-            # デフォルトのNPC配置
-            self.add_npc(5, 10, "EC2", "I'm EC2, a virtual server in the cloud.")
-            self.add_npc(15, 10, "S3", "I'm S3, an object storage service.")
-            self.add_npc(25, 10, "Lambda", "I'm Lambda, a serverless compute service.")
+            # Default NPCs
+            self.add_npc(5, 10, "EC2", "I'm EC2, a virtual server in the cloud.", True, "ec2")
+            self.add_npc(15, 10, "S3", "I'm S3, an object storage service.", True, "s3")
+            self.add_npc(25, 10, "Lambda", "I'm Lambda, a serverless compute service.", True, "lambda")
         
     def _create_town_roads(self):
         """町の道路を作成"""
@@ -826,15 +830,24 @@ class GameMap:
             
         return True
         
-    def add_npc(self, x, y, name, dialog):
+    def add_npc(self, x, y, name, dialog, is_service=False, service_id=None):
         """NPCを追加"""
-        self.tiles[y][x] = TILE_NPC
-        self.npcs.append({
+        # タイルをNPCに設定
+        if 0 <= y < self.height and 0 <= x < self.width:
+            self.tiles[y][x] = TILE_NPC
+            
+        npc_data = {
             "x": x,
             "y": y,
             "name": name,
             "dialog": dialog
-        })
+        }
+        
+        if is_service:
+            npc_data["is_service"] = True
+            npc_data["service_id"] = service_id or name.lower()
+            
+        self.npcs.append(npc_data)
         
     def add_portal(self, x, y, destination, dest_x, dest_y):
         """ポータルを追加"""
@@ -884,20 +897,38 @@ class GameMap:
         
         # 歩行可能なタイル
         walkable_tiles = [TILE_FLOOR, TILE_GRASS, TILE_ROAD, TILE_DOOR, TILE_NPC, TILE_PORTAL, TILE_SHOP,
-                          TILE_FOUNTAIN, TILE_BENCH, TILE_LAMP, TILE_SIGN, TILE_FLOWERBED]
+                          TILE_FOUNTAIN, TILE_BENCH, TILE_LAMP, TILE_SIGN, TILE_FLOWERBED, TILE_INN]
         
         return tile_type in walkable_tiles
         
     def get_npc_at(self, x, y):
-        """指定位置にいるNPCを取得"""
-        if self.tiles[y][x] == TILE_NPC:
+        """Get NPC at the specified position or adjacent tiles"""
+        try:
+            # Check if out of map bounds
+            if x < 0 or y < 0 or x >= self.width or y >= self.height:
+                return None
+                
+            # First check exact position
+            if self.tiles[y][x] == TILE_NPC:
+                for npc in self.npcs:
+                    if npc["x"] == x and npc["y"] == y:
+                        return npc
+            
+            # Then check adjacent tiles (for easier interaction)
             for npc in self.npcs:
-                if npc["x"] == x and npc["y"] == y:
+                if abs(npc["x"] - x) <= 1 and abs(npc["y"] - y) <= 1:
                     return npc
-        return None
+                    
+            return None
+        except Exception as e:
+            print(f"Error in get_npc_at({x}, {y}): {e}")
+            return None
         
     def get_portal_at(self, x, y):
-        """指定位置にあるポータルを取得"""
+        """Get portal at the specified position"""
+        if x < 0 or y < 0 or x >= self.width or y >= self.height:
+            return None
+            
         if self.tiles[y][x] == TILE_PORTAL:
             for portal in self.portals:
                 if portal["x"] == x and portal["y"] == y:
@@ -905,15 +936,30 @@ class GameMap:
         return None
         
     def get_shop_at(self, x, y):
-        """指定位置にあるショップを取得"""
-        if self.tiles[y][x] == TILE_SHOP:
+        """Get shop at the specified position or adjacent tiles"""
+        try:
+            # Check if out of map bounds
+            if x < 0 or y < 0 or x >= self.width or y >= self.height:
+                return None
+                
+            # First check exact position
+            if self.tiles[y][x] == TILE_SHOP:
+                for shop in self.shops:
+                    if shop["x"] == x and shop["y"] == y:
+                        return shop
+            
+            # Then check adjacent tiles (for easier interaction)
             for shop in self.shops:
-                if shop["x"] == x and shop["y"] == y:
+                if abs(shop["x"] - x) <= 1 and abs(shop["y"] - y) <= 1:
                     return shop
-        return None
+                    
+            return None
+        except Exception as e:
+            print(f"Error in get_shop_at({x}, {y}): {e}")
+            return None
         
     def check_random_encounter(self):
-        """ランダムエンカウントのチェック"""
+        """Check for random encounters"""
         return random.random() < self.encounter_rate
 
 class MapManager:
@@ -991,3 +1037,67 @@ class MapManager:
             self.current_map = self.maps[map_name]
             return x, y
         return None, None
+class MapManager:
+    def __init__(self):
+        self.maps = {}
+        self.current_map = None
+        
+    def generate_maps(self):
+        """Generate all maps"""
+        # Main world map
+        world_map_data = get_world_map()
+        world_map = GameMap(world_map_data["name"], world_map_data["width"], world_map_data["height"], MAP_WORLD)
+        world_map.tiles = world_map_data["tiles"]
+        world_map.npcs = world_map_data["npcs"]
+        world_map.portals = world_map_data["portals"]
+        world_map.shops = world_map_data["shops"]
+        world_map.encounter_rate = world_map_data["encounter_rate"]
+        self.maps[world_map.name] = world_map
+        
+        # Computing Town
+        computing_town_data = get_computing_town_map()
+        computing_town = GameMap(computing_town_data["name"], computing_town_data["width"], computing_town_data["height"], MAP_TOWN)
+        computing_town.tiles = computing_town_data["tiles"]
+        computing_town.npcs = computing_town_data["npcs"]
+        computing_town.portals = computing_town_data["portals"]
+        computing_town.shops = computing_town_data["shops"]
+        computing_town.encounter_rate = computing_town_data["encounter_rate"]
+        self.maps[computing_town.name] = computing_town
+        
+        # Storage Town
+        storage_town_data = get_storage_town_map()
+        storage_town = GameMap(storage_town_data["name"], storage_town_data["width"], storage_town_data["height"], MAP_TOWN)
+        storage_town.tiles = storage_town_data["tiles"]
+        storage_town.npcs = storage_town_data["npcs"]
+        storage_town.portals = storage_town_data["portals"]
+        storage_town.shops = storage_town_data["shops"]
+        storage_town.encounter_rate = storage_town_data["encounter_rate"]
+        self.maps[storage_town.name] = storage_town
+        
+        # Database Town
+        database_town_data = get_database_town_map()
+        database_town = GameMap(database_town_data["name"], database_town_data["width"], database_town_data["height"], MAP_TOWN)
+        database_town.tiles = database_town_data["tiles"]
+        database_town.npcs = database_town_data["npcs"]
+        database_town.portals = database_town_data["portals"]
+        database_town.shops = database_town_data["shops"]
+        database_town.encounter_rate = database_town_data["encounter_rate"]
+        self.maps[database_town.name] = database_town
+        
+        # Security Town
+        security_town_data = get_security_town_map()
+        security_town = GameMap(security_town_data["name"], security_town_data["width"], security_town_data["height"], MAP_TOWN)
+        security_town.tiles = security_town_data["tiles"]
+        security_town.npcs = security_town_data["npcs"]
+        security_town.portals = security_town_data["portals"]
+        security_town.shops = security_town_data["shops"]
+        security_town.encounter_rate = security_town_data["encounter_rate"]
+        self.maps[security_town.name] = security_town
+        
+        # Set current map to world map
+        self.current_map = self.maps["AWS Cloud World"]
+    def get_map(self, map_name):
+        """Get a map by name"""
+        if map_name in self.maps:
+            return self.maps[map_name]
+        return None

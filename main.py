@@ -8,7 +8,7 @@ import json
 import os
 import math
 from game_assets import GameAssets, WHITE, BLACK, BLUE, GRAY
-from game_map import MapManager
+from game_map import GameMap, MapManager, TILE_EMPTY, TILE_FLOOR, TILE_WALL, TILE_GRASS, TILE_WATER, TILE_ROAD, TILE_DOOR, TILE_NPC, TILE_PORTAL, TILE_SHOP, TILE_MOUNTAIN, TILE_FOREST, TILE_SAND, TILE_FOUNTAIN, TILE_BENCH, TILE_LAMP, TILE_SIGN, TILE_FLOWERBED, TILE_STATUE, TILE_TABLE, TILE_CHAIR, TILE_INN
 from battle_system import BattleSystem
 from menu_system import MenuSystem
 from cutscene_system import CutsceneSystem
@@ -18,13 +18,13 @@ from item_system import ItemSystem
 from shop_system import ShopSystem
 from aws_services import get_service_by_name, get_all_services
 
-# ゲームの定数
+# Game constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
 TITLE = "AWS Cloud Isekai RPG"
 
-# ゲームの状態
+# Game states
 STATE_TITLE = 0
 STATE_GAME = 1
 STATE_BATTLE = 2
@@ -38,6 +38,8 @@ STATE_INVENTORY = 9
 STATE_GAME_OVER = 10
 
 class Game:
+    instance = None  # Class variable to store the singleton instance
+    
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -46,10 +48,10 @@ class Game:
         self.state = STATE_TITLE
         self.running = True
         
-        # アセットのロード
+        # Load assets
         self.assets = GameAssets()
         
-        # プレイヤーデータ
+        # Player data
         self.player = {
             "name": "Rookie Engineer",
             "level": 1,
@@ -61,100 +63,96 @@ class Game:
             "attack": 10,
             "defense": 5,
             "credits": 1000,
-            "position": [25, 25],  # 中央の十字路に変更
-            "tile_x": 25,          # 中央の十字路に変更
-            "tile_y": 25,          # 中央の十字路に変更
+            "position": [25, 25],  # Central crossroads
+            "tile_x": 25,          # Central crossroads
+            "tile_y": 25,          # Central crossroads
             "completed_quests": [],
             "defeated_bosses": [],
             "recruited_services": []
         }
         
-        # パーティメンバー
+        # Party members
         self.party = []
         
-        # マップ管理
+        # Map management
         self.map_manager = MapManager()
         
-        # バトルシステム
+        # Battle system
         self.battle_system = BattleSystem(self.player, self.party, self.assets)
         
-        # メニューシステム
+        # Menu system
         self.menu_system = MenuSystem(self.player, self.party, self.assets)
         
-        # カットシーンシステム
+        # Cutscene system
         self.cutscene_system = CutsceneSystem(self.assets)
         
-        # クエストシステム
+        # Quest system
         self.quest_system = QuestSystem(self.player, self.assets)
         
-        # 仲間システム
+        # Recruitment system
         self.recruitment_system = RecruitmentSystem(self.player, self.party, self.assets)
         
-        # アイテムシステム
+        # Item system
         self.item_system = ItemSystem(self.player, self.assets)
         
-        # ショップシステム
+        # Shop system
         self.shop_system = ShopSystem(self.player, self.assets)
         
-        # ダイアログ
+        # Save file
+        self.save_file = "save_data.json"
+        
+        # Discovered towns - initially only Computing Town is discovered
+        self.discovered_towns = ["Computing Town"]
+        
+        # Discovered towns - initially only Computing Town is discovered
+        self.discovered_towns = ["Computing Town"]
+        
+        # Dialog
         self.dialog = None
         self.dialog_npc = None
         self.dialog_npc_is_service = False
         
-        # カメラ位置
+        # Camera position
         self.camera_x = 0
         self.camera_y = 0
         
-        # 歩数カウンター（ランダムエンカウント用）
+        # Step counter (for random encounters)
         self.steps = 0
         
-        # タイトル画面のボタン（位置を下部に変更）
+        # Title screen buttons
         self.title_buttons = {
             "new_game": pygame.Rect(300, 400, 200, 50),
             "continue": pygame.Rect(300, 460, 200, 50),
             "exit": pygame.Rect(300, 520, 200, 50)
         }
         
-        # 初期クエストの設定
+        # Initial quests
         self.quest_system.add_quest("meet_ec2")
         self.quest_system.add_quest("explore_computing_town")
-        self.dialog_npc = None
-        self.dialog_npc_is_service = False
         
-        # カメラ位置
-        self.camera_x = 0
-        self.camera_y = 0
-        
-        # 歩数カウンター（ランダムエンカウント用）
-        self.steps = 0
-        
-        # タイトル画面のボタン
-        self.title_buttons = {
-            "new_game": pygame.Rect(300, 250, 200, 50),
-            "continue": pygame.Rect(300, 320, 200, 50),
-            "exit": pygame.Rect(300, 390, 200, 50)
-        }
-        
-        # 初期クエストの設定
-        self.quest_system.add_quest("meet_ec2")
-        self.quest_system.add_quest("explore_computing_town")
+        # Load saved game if exists
+        self.save_file = "save_data.json"
     def run(self):
-        """ゲームのメインループ"""
+        """Main game loop"""
         try:
+            # Initialize maps
+            self.map_manager.generate_maps()
+            self.map_manager.current_map = self.map_manager.get_map("AWS Cloud World")
+            
             while self.running:
-                # イベント処理
+                # Handle events
                 self.handle_events()
                 
-                # 状態に応じた更新
+                # Update based on state
                 if self.state == STATE_BATTLE:
                     self.battle_system.update()
                 elif self.state == STATE_CUTSCENE:
                     self.cutscene_system.update()
                 
-                # 画面クリア
+                # Clear screen
                 self.screen.fill(BLACK)
                 
-                # 状態に応じた描画
+                # Draw based on state
                 if self.state == STATE_TITLE:
                     self.draw_title_screen()
                 elif self.state == STATE_GAME:
@@ -267,7 +265,46 @@ class Game:
                     
                 # キー入力
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key == 101 and self.state == STATE_GAME:  # 101 = pygame.K_e
+                        # プレイヤーの周囲のNPCを探す
+                        found_npc = False
+                        print(f"Eキーが押されました。プレイヤー位置: ({self.player['tile_x']}, {self.player['tile_y']})")
+                        for dx in [-1, 0, 1]:
+                            for dy in [-1, 0, 1]:
+                                if dx == 0 and dy == 0:
+                                    continue
+                                check_x = self.player["tile_x"] + dx
+                                check_y = self.player["tile_y"] + dy
+                                try:
+                                    npc = self.map_manager.current_map.get_npc_at(check_x, check_y)
+                                    if npc:
+                                        print(f"NPCが見つかりました: {npc['name']} at ({check_x}, {check_y})")
+                                        self.start_dialog(npc["dialog"], npc)
+                                        found_npc = True
+                                        break
+                                except Exception as e:
+                                    print(f"NPC検索中のエラー: {e}")
+                            if found_npc:
+                                break
+                        if not found_npc:
+                            print("周囲にNPCが見つかりませんでした")
+                    elif event.key == pygame.K_r and self.state == STATE_DIALOG and self.dialog_npc_is_service:
+                        # 仲間システムを起動
+                        if self.dialog_npc and "name" in self.dialog_npc:
+                            print(f"Rキーが押されました。仲間システムを起動します。サービス名: {self.dialog_npc['name']}")
+                            self.state = STATE_RECRUITMENT
+                            
+                            # サービス名の処理（スペースを削除してlower caseに）
+                            service_name = self.dialog_npc["name"].lower()
+                            print(f"サービス名を変換: {self.dialog_npc['name']} -> {service_name}")
+                            result = self.recruitment_system.start_recruitment(service_name)
+                            print(f"仲間システム起動結果: {result}, 状態: {self.recruitment_system.state}")
+                            if not result or self.recruitment_system.state == "inactive":
+                                print("仲間システムの起動に失敗しました。ゲーム画面に戻ります。")
+                                self.state = STATE_GAME
+                            self.dialog = None
+                            self.dialog_npc = None
+                    elif event.key == pygame.K_ESCAPE:
                         if self.state == STATE_TITLE:
                             self.running = False
                         elif self.state == STATE_GAME:
@@ -275,24 +312,24 @@ class Game:
                             self.menu_system.active = True  # 直接activeをTrueに設定
                         elif self.state == STATE_MENU:
                             self.state = STATE_GAME
-                            self.menu_system.active = False  # 直接activeをFalseに設定
+                            self.menu_system.active = False
                         elif self.state == STATE_QUEST_LOG:
                             self.state = STATE_GAME
                         elif self.state == STATE_INVENTORY:
                             self.state = STATE_GAME
                             self.item_system.active = False
-                        # バトル中はESCキーを無効化
+                        # Disable ESC key during battle
                         elif self.state == STATE_BATTLE:
-                            pass  # 何もしない
+                            pass  # Do nothing
                         else:
-                            # その他の状態ではゲーム画面に戻る
+                            # Return to game screen for other states
                             self.state = STATE_GAME
                             
-                    # クエストログを表示
+                    # Show quest log
                     if event.key == pygame.K_q and self.state == STATE_GAME:
                         self.state = STATE_QUEST_LOG
                             
-                    # ゲーム画面での操作
+                    # Game screen controls
                     if self.state == STATE_GAME:
                         moved = False
                         
@@ -306,10 +343,29 @@ class Game:
                             moved = self.move_player(1, 0)
                         elif event.key == pygame.K_m:
                             self.state = STATE_MENU
-                            self.menu_system.active = True  # 直接activeをTrueに設定
+                            self.menu_system.active = True
                         elif event.key == pygame.K_i:
                             self.state = STATE_INVENTORY
                             self.item_system.active = True
+                        elif event.key == pygame.K_s:
+                            # Save game
+                            try:
+                                self.save_game()
+                                self.start_dialog("Game saved successfully!")
+                            except Exception as e:
+                                print(f"Error saving game: {e}")
+                                self.start_dialog("Failed to save game.")
+                        elif event.key == pygame.K_e:
+                            # Check for nearby NPCs, shops, or inns to interact with
+                            if not self.check_for_npc_interaction():
+                                if not self.check_for_shop_interaction():
+                                    self.check_for_inn_interaction()
+                        elif event.key == pygame.K_s:
+                            # Save game
+                            if self.save_game():
+                                self.start_dialog("Game saved successfully!")
+                            else:
+                                self.start_dialog("Failed to save game.")
                         
                         # 移動したらランダムエンカウントチェック
                         if moved:
@@ -353,23 +409,19 @@ class Game:
                             # エラー時のみゲーム画面に戻る
                             self.state = STATE_GAME
                     
-                    # ダイアログ画面
+                    # Dialog screen
                     elif self.state == STATE_DIALOG:
                         if event.type == pygame.MOUSEBUTTONDOWN:
-                            # EC2との会話の場合、クエスト完了処理
+                            # EC2 quest completion handling
                             if self.dialog_npc and self.dialog_npc["name"] == "EC2" and "meet_ec2" in self.quest_system.active_quests:
+                                print("Completing EC2 quest")
                                 self.quest_system.complete_quest("meet_ec2")
-                                # 新しいクエストを追加
+                                # Add new quest
                                 self.quest_system.add_quest("ec2_quest")
+                                # Save game after quest completion
+                                self.save_game()
                             
                             self.state = STATE_GAME
-                            self.dialog = None
-                            self.dialog_npc = None
-                        elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and self.dialog_npc_is_service:
-                            # 仲間システムを起動
-                            if self.dialog_npc and "name" in self.dialog_npc:
-                                self.state = STATE_RECRUITMENT
-                                self.recruitment_system.start_recruitment(self.dialog_npc["name"])
                             self.dialog = None
                             self.dialog_npc = None
                     
@@ -408,7 +460,9 @@ class Game:
                     # 仲間システム画面
                     elif self.state == STATE_RECRUITMENT:
                         try:
+                            print("仲間システム画面でのマウスクリック")
                             if self.recruitment_system.handle_event(event):
+                                print(f"仲間システムの状態: {self.recruitment_system.state}")
                                 if self.recruitment_system.state == "inactive":
                                     self.state = STATE_GAME
                         except Exception as e:
@@ -481,9 +535,9 @@ class Game:
             }
             
     def start_new_game(self):
-        """新しいゲームを開始"""
+        """Start a new game"""
         try:
-            # プレイヤーデータの初期化
+            # Initialize player data
             self.player = {
                 "name": "Rookie Engineer",
                 "level": 1,
@@ -495,9 +549,9 @@ class Game:
                 "attack": 10,
                 "defense": 5,
                 "credits": 1000,
-                "position": [25, 25],  # 中央の十字路に変更
-                "tile_x": 25,          # 中央の十字路に変更
-                "tile_y": 25,          # 中央の十字路に変更
+                "position": [25, 25],  # Central crossroads
+                "tile_x": 25,          # Central crossroads
+                "tile_y": 25,          # Central crossroads
                 "completed_quests": [],
                 "defeated_bosses": [],
                 "recruited_services": [],
@@ -508,42 +562,51 @@ class Game:
                 ]
             }
             
-            # パーティの初期化
+            # Initialize party
             self.party = []
             
-            # マップの初期化
+            # Initialize maps
             self.map_manager.generate_maps()
             self.map_manager.current_map = self.map_manager.get_map("AWS Cloud World")
             
-            # クエストの初期化
+            # Reset discovered towns - only Computing Town is available at start
+            self.discovered_towns = ["Computing Town"]
+            
+            # Initialize quests
             if hasattr(self, 'quest_system'):
                 self.quest_system.active_quests = []
                 self.quest_system.completed_quests = []
                 self.quest_system.add_quest("meet_ec2")
-                self.quest_system.add_quest("explore_computing_town")
             
-            # オープニングカットシーンを開始
+            # Start opening cutscene
             self.state = STATE_CUTSCENE
             self.cutscene_system.start_opening()
+            
+            # Save the initial game state
+            try:
+                self.save_game()
+            except Exception as e:
+                print(f"Error saving game during new game: {e}")
         except Exception as e:
-            print(f"新規ゲーム開始中のエラー: {e}")
-            # エラー時はタイトル画面に戻る
+            print(f"Error starting new game: {e}")
+            # Return to title screen on error
             self.state = STATE_TITLE
     def show_tutorial(self):
-        """チュートリアルダイアログを表示"""
-        tutorial_text = """ようこそ、AWS クラウド異世界RPGへ！
+        """Show tutorial dialog"""
+        tutorial_text = """Welcome to AWS Cloud Isekai RPG!
 
-あなたは100日徹夜した新人エンジニアで、AWSサービスが住む異世界に転移しました。
-まずは「Computing Town」に向かい、EC2と会話してみましょう。
+You are a rookie engineer who has been transported to a different world where AWS services live after working 100 days straight.
+First, head to Computing Town and talk to EC2.
 
-【操作方法】
-・移動: 矢印キー
-・メニュー: M キー または ESC キー
-・クエストログ: Q キー
-・会話/決定: マウスクリック
-・AWSサービスを仲間にする: 会話中にRキー
+[Controls]
+• Movement: Arrow keys
+• Menu: M key or ESC key
+• Quest log: Q key
+• Interact: E key
+• Recruit AWS services: Press R key during conversation
+• Save game: S key
 
-現在の目標: Computing Townに向かい、EC2と会話する"""
+Current objective: Go to Computing Town and talk to EC2. Other towns will be discovered as you progress through the story."""
         
         self.start_dialog(tutorial_text)
         
@@ -587,18 +650,18 @@ class Game:
             print(f"ロード中のエラー: {e}")
             self.state = STATE_TITLE
     def draw_title_screen(self):
-        """タイトル画面を描画"""
+        """Draw the title screen"""
         screen_width = 800
         screen_height = 600
         
-        # 背景 - 深い青からのグラデーション
+        # Background - deep blue gradient
         for y in range(screen_height):
-            # 上から下へのグラデーション（深い青から星空のような暗い青へ）
+            # Gradient from deep blue to darker blue (like a night sky)
             color_value = 30 + int((y / screen_height) * 50)
             color = (max(0, color_value - 20), max(0, color_value - 10), min(int(color_value * 2), 100))
             pygame.draw.line(self.screen, color, (0, y), (screen_width, y))
         
-        # 星を描画
+        # Draw stars
         for i in range(100):
             star_x = random.randint(0, screen_width)
             star_y = random.randint(0, screen_height)
@@ -607,19 +670,19 @@ class Game:
             pygame.draw.circle(self.screen, (star_brightness, star_brightness, star_brightness), 
                              (star_x, star_y), star_size)
             
-        # 雲のような模様を追加
+        # Add cloud-like patterns
         for i in range(15):
             cloud_x = random.randint(0, screen_width)
             cloud_y = random.randint(0, screen_height // 2)
             cloud_size = 70 + (i % 5) * 30
             
             cloud_surface = pygame.Surface((cloud_size, cloud_size), pygame.SRCALPHA)
-            cloud_color = (100, 130, 200, 30)  # 半透明の青い雲
+            cloud_color = (100, 130, 200, 30)  # Semi-transparent blue clouds
             pygame.draw.ellipse(cloud_surface, cloud_color, (0, 0, cloud_size, cloud_size//2))
             
             self.screen.blit(cloud_surface, (cloud_x, cloud_y))
             
-        # AWS風のロゴ背景（オレンジ色の矢印）
+        # AWS-style logo background (orange arrow)
         arrow_points = [
             (screen_width//2 - 180, 70),
             (screen_width//2 + 180, 70),
@@ -745,23 +808,23 @@ class Game:
         copyright_text = self.assets.render_text("© 2025 AWS Cloud RPG Team", "small", (150, 150, 200))
         self.screen.blit(copyright_text, (10, screen_height - copyright_text.get_height() - 10))
     def draw_game_screen(self):
-        """ゲーム画面を描画"""
-        # マップの描画
+        """Draw the game screen"""
+        # Draw the map
         self.draw_map()
         
-        # マップ名（小さく表示）
+        # Map name (small display)
         map_name = self.assets.render_text(self.map_manager.current_map.name, "small", WHITE)
         self.screen.blit(map_name, (10, 10))
         
-        # 現在の目標（小さく表示）
+        # Current objective (small display)
         objective_text = self.assets.render_text(self.quest_system.get_current_objective(), "small", WHITE)
         self.screen.blit(objective_text, (10, 30))
         
-        # 操作ガイド（小さく表示）
-        guide_text = self.assets.render_text("M: Menu  Q: Quests", "small", WHITE)
+        # Controls guide (small display)
+        guide_text = self.assets.render_text("M: Menu  Q: Quests  E: Interact", "small", WHITE)
         self.screen.blit(guide_text, (800 - guide_text.get_width() - 10, 10))
         
-        # 方向指示（目的地への矢印）
+        # Direction arrow (pointing to objective)
         self.draw_direction_arrow()
         
     def draw_direction_arrow(self):
@@ -828,117 +891,128 @@ class Game:
                 (end_x + dy * 5 - dx * 5, end_y - dx * 5 - dy * 5)
             ])
     def draw_map(self):
-        """マップを描画"""
-        # 表示範囲の計算
+        """Draw the map"""
+        # Calculate visible range
         tile_size = 40
         visible_tiles_x = 800 // tile_size + 2
         visible_tiles_y = 600 // tile_size + 2
         
-        # カメラ位置の調整（プレイヤーが中心）
+        # Adjust camera position (player centered)
         self.camera_x = self.player["tile_x"] * tile_size - 800 // 2
         self.camera_y = self.player["tile_y"] * tile_size - 600 // 2
         
-        # カメラ位置の制限
+        # Limit camera position
         self.camera_x = max(0, min(self.camera_x, self.map_manager.current_map.width * tile_size - 800))
         self.camera_y = max(0, min(self.camera_y, self.map_manager.current_map.height * tile_size - 600))
         
-        # タイルの描画
+        # Calculate starting tile
         start_x = self.camera_x // tile_size
         start_y = self.camera_y // tile_size
         
+        # Draw tiles
         for y in range(start_y, start_y + visible_tiles_y):
             for x in range(start_x, start_x + visible_tiles_x):
-                # マップ範囲内かチェック
+                # Check if within map bounds
                 if 0 <= x < self.map_manager.current_map.width and 0 <= y < self.map_manager.current_map.height:
                     tile_type = self.map_manager.current_map.tiles[y][x]
                     screen_x = x * tile_size - self.camera_x
                     screen_y = y * tile_size - self.camera_y
-                
-                # タイルタイプに応じた画像を描画
-                if tile_type == 0:  # 空
-                    # 空のタイルには床を描画（黒いタイルを防ぐため）
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                elif tile_type == 1:  # 床
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                elif tile_type == 2:  # 壁
-                    self.screen.blit(self.assets.get_image("wall"), (screen_x, screen_y))
-                elif tile_type == 3:  # 草
-                    self.screen.blit(self.assets.get_image("grass"), (screen_x, screen_y))
-                elif tile_type == 4:  # 水
-                    self.screen.blit(self.assets.get_image("water"), (screen_x, screen_y))
-                elif tile_type == 5:  # 道
-                    self.screen.blit(self.assets.get_image("road"), (screen_x, screen_y))
-                elif tile_type == 6:  # ドア
-                    # ドアの下に床を描画
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("door"), (screen_x, screen_y))
-                elif tile_type == 7:  # NPC
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("npc"), (screen_x, screen_y))
-                elif tile_type == 8:  # ポータル
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
                     
-                    # ポータルアニメーション効果
-                    current_time = pygame.time.get_ticks()
-                    pulse = (math.sin(current_time / 300) + 1) / 2  # 0～1の間で脈動
-                    
-                    # ポータルの拡大縮小効果
-                    scale_factor = 1.0 + pulse * 0.2  # 1.0～1.2の間でサイズ変動
-                    portal_img = self.assets.get_image("portal")
-                    
-                    # 拡大したポータル画像を作成
-                    scaled_size = int(tile_size * scale_factor)
-                    offset = (scaled_size - tile_size) // 2
-                    
-                    # 拡大したポータルを中央に配置
-                    self.screen.blit(portal_img, (screen_x - offset, screen_y - offset))
-                    
-                    # ポータルの上に町の名前を表示
-                    portal = self.map_manager.current_map.get_portal_at(x, y)
-                    if portal and "destination" in portal:
-                        # 名前の色をアニメーション（明るさを変化）
-                        name_brightness = int(200 + 55 * pulse)  # 200～255の間で明るさ変動
-                        name_color = (name_brightness, name_brightness, name_brightness)
+                    # Draw appropriate image based on tile type
+                    if tile_type == TILE_EMPTY:
+                        # Draw floor for empty tiles (to prevent black tiles)
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                    elif tile_type == TILE_FLOOR:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                    elif tile_type == TILE_WALL:
+                        self.screen.blit(self.assets.get_image("wall"), (screen_x, screen_y))
+                    elif tile_type == TILE_GRASS:
+                        self.screen.blit(self.assets.get_image("grass"), (screen_x, screen_y))
+                    elif tile_type == TILE_WATER:
+                        self.screen.blit(self.assets.get_image("water"), (screen_x, screen_y))
+                    elif tile_type == TILE_ROAD:
+                        self.screen.blit(self.assets.get_image("road"), (screen_x, screen_y))
+                    elif tile_type == TILE_DOOR:
+                        # Draw floor under door
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("door"), (screen_x, screen_y))
+                    elif tile_type == TILE_NPC:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("npc"), (screen_x, screen_y))
+                    elif tile_type == TILE_PORTAL:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
                         
-                        town_name = self.assets.render_text(portal["destination"], "small", name_color)
-                        # 名前を中央に配置
-                        name_x = screen_x + (tile_size - town_name.get_width()) // 2
-                        name_y = screen_y - 20  # タイルの上に表示（少し上げる）
+                        # Portal animation effect
+                        current_time = pygame.time.get_ticks()
+                        pulse = (math.sin(current_time / 300) + 1) / 2  # Pulse between 0 and 1
                         
-                        # 背景を少し暗くして読みやすくする
-                        name_bg = pygame.Surface((town_name.get_width() + 8, town_name.get_height() + 4))
-                        name_bg.fill((0, 0, 50))
-                        name_bg.set_alpha(150)  # 半透明
-                        self.screen.blit(name_bg, (name_x - 4, name_y - 2))
-                        self.screen.blit(town_name, (name_x, name_y))
-                elif tile_type == 9:  # ショップ
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("shop"), (screen_x, screen_y))
-                elif tile_type == 10:  # 山
-                    self.screen.blit(self.assets.get_image("mountain"), (screen_x, screen_y))
-                elif tile_type == 11:  # 森
-                    self.screen.blit(self.assets.get_image("forest"), (screen_x, screen_y))
-                elif tile_type == 12:  # 砂
-                    self.screen.blit(self.assets.get_image("sand"), (screen_x, screen_y))
-                # 町の装飾オブジェクト
-                elif tile_type == 13:  # 噴水
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("fountain"), (screen_x, screen_y))
-                elif tile_type == 14:  # ベンチ
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("bench"), (screen_x, screen_y))
-                elif tile_type == 15:  # 街灯
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("lamp"), (screen_x, screen_y))
-                elif tile_type == 16:  # 看板
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("sign"), (screen_x, screen_y))
-                elif tile_type == 17:  # 花壇
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
-                    self.screen.blit(self.assets.get_image("flowerbed"), (screen_x, screen_y))
-                else:  # 未定義のタイルタイプ
-                    # デフォルトで床を表示
-                    self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        # Portal scaling effect
+                        scale_factor = 1.0 + pulse * 0.2  # Scale between 1.0 and 1.2
+                        portal_img = self.assets.get_image("portal")
+                        
+                        # Create scaled portal image
+                        scaled_size = int(tile_size * scale_factor)
+                        offset = (scaled_size - tile_size) // 2
+                        
+                        # Place scaled portal centered
+                        self.screen.blit(portal_img, (screen_x - offset, screen_y - offset))
+                        
+                        # Show town name above portal
+                        portal = self.map_manager.current_map.get_portal_at(x, y)
+                        if portal and "destination" in portal:
+                            # Animate name color (brightness)
+                            name_brightness = int(200 + 55 * pulse)  # Brightness between 200-255
+                            name_color = (name_brightness, name_brightness, name_brightness)
+                            
+                            town_name = self.assets.render_text(portal["destination"], "small", name_color)
+                            # Center the name
+                            name_x = screen_x + (tile_size - town_name.get_width()) // 2
+                            name_y = screen_y - 20  # Position above tile
+                            
+                            # Add slightly dark background for readability
+                            name_bg = pygame.Surface((town_name.get_width() + 8, town_name.get_height() + 4))
+                            name_bg.fill((0, 0, 50))
+                            name_bg.set_alpha(150)  # Semi-transparent
+                            self.screen.blit(name_bg, (name_x - 4, name_y - 2))
+                            self.screen.blit(town_name, (name_x, name_y))
+                    elif tile_type == TILE_SHOP:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("shop"), (screen_x, screen_y))
+                    elif tile_type == TILE_MOUNTAIN:
+                        self.screen.blit(self.assets.get_image("mountain"), (screen_x, screen_y))
+                    elif tile_type == TILE_FOREST:
+                        self.screen.blit(self.assets.get_image("forest"), (screen_x, screen_y))
+                    elif tile_type == TILE_SAND:
+                        self.screen.blit(self.assets.get_image("sand"), (screen_x, screen_y))
+                    elif tile_type == TILE_FOUNTAIN:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("fountain"), (screen_x, screen_y))
+                    elif tile_type == TILE_BENCH:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("bench"), (screen_x, screen_y))
+                    elif tile_type == TILE_LAMP:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("lamp"), (screen_x, screen_y))
+                    elif tile_type == TILE_SIGN:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("sign"), (screen_x, screen_y))
+                    elif tile_type == TILE_FLOWERBED:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        self.screen.blit(self.assets.get_image("flowerbed"), (screen_x, screen_y))
+                    elif tile_type == TILE_INN:
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
+                        # Use a different color for the inn to make it stand out
+                        inn_img = self.assets.get_image("shop")  # Reuse shop image for now
+                        # Draw a bed icon or something to indicate it's an inn
+                        self.screen.blit(inn_img, (screen_x, screen_y))
+                        
+                        # Draw "INN" text above it
+                        inn_text = self.assets.render_text("INN", "small", (255, 255, 0))
+                        self.screen.blit(inn_text, (screen_x + (tile_size - inn_text.get_width()) // 2, 
+                                                  screen_y - 15))
+                    else:
+                        # Default to floor for undefined tile types
+                        self.screen.blit(self.assets.get_image("floor"), (screen_x, screen_y))
     
         # NPCの描画
         for npc in self.map_manager.current_map.npcs:
@@ -1006,27 +1080,58 @@ class Game:
                     self.screen.blit(bubble_text, (bubble_x - bubble_text.get_width() // 2, 
                                                 bubble_y - bubble_text.get_height() // 2))
     
-        # ショップの描画
+        # Draw shops
         for shop in self.map_manager.current_map.shops:
             shop_x = shop["x"] * tile_size - self.camera_x
             shop_y = shop["y"] * tile_size - self.camera_y
             
-            # 画面内にあるショップのみ描画
+            # Only draw shops that are on screen
             if -tile_size <= shop_x < 800 + tile_size and -tile_size <= shop_y < 600 + tile_size:
-                # ショップアイコン
-                self.screen.blit(self.assets.get_image("shop"), (shop_x, shop_y))
-            
-                # ショップ名を表示
+                # Shop name display
                 shop_name = self.assets.render_text(shop["name"], "small", (255, 255, 0))
                 name_x = shop_x + (tile_size - shop_name.get_width()) // 2
                 name_y = shop_y - 15
                 
-                # 名前の背景
+                # Name background
                 name_bg = pygame.Surface((shop_name.get_width() + 4, shop_name.get_height() + 2))
                 name_bg.fill((50, 30, 0))
                 name_bg.set_alpha(150)
                 self.screen.blit(name_bg, (name_x - 2, name_y - 1))
                 self.screen.blit(shop_name, (name_x, name_y))
+                
+                # Check if player is near the shop
+                player_x = self.player["tile_x"]
+                player_y = self.player["tile_y"]
+                if abs(player_x - shop["x"]) <= 1 and abs(player_y - shop["y"]) <= 1:
+                    # Show speech bubble
+                    bubble_x = shop_x + tile_size // 2
+                    bubble_y = shop_y - 30
+                    
+                    # Bubble background
+                    bubble_width = 120
+                    bubble_height = 25
+                    bubble_rect = pygame.Rect(bubble_x - bubble_width // 2, bubble_y - bubble_height // 2, 
+                                            bubble_width, bubble_height)
+                    
+                    # Bubble shape
+                    pygame.draw.ellipse(self.screen, WHITE, bubble_rect)
+                    pygame.draw.ellipse(self.screen, BLACK, bubble_rect, 2)
+                    
+                    # Bubble pointer
+                    point_x = bubble_x
+                    point_y = bubble_y + bubble_height // 2
+                    pygame.draw.polygon(self.screen, WHITE, [
+                        (point_x - 5, point_y),
+                        (point_x + 5, point_y),
+                        (point_x, point_y + 10)
+                    ])
+                    pygame.draw.line(self.screen, BLACK, (point_x - 5, point_y), (point_x, point_y + 10), 2)
+                    pygame.draw.line(self.screen, BLACK, (point_x + 5, point_y), (point_x, point_y + 10), 2)
+                    
+                    # Bubble text
+                    bubble_text = self.assets.render_text("Press E to shop", "small", BLACK)
+                    self.screen.blit(bubble_text, (bubble_x - bubble_text.get_width() // 2, 
+                                                bubble_y - bubble_text.get_height() // 2))
                 
                 # プレイヤーがショップの近くにいるかチェック
                 player_x = self.player["tile_x"]
@@ -1068,74 +1173,111 @@ class Game:
         self.screen.blit(self.assets.get_image("player"), (player_x, player_y))
     
     def draw_dialog(self):
-        """ダイアログを描画"""
+        """Draw the dialog box"""
         if not self.dialog:
             return
             
-        # ダイアログボックス
+        # Dialog box
         dialog_box = pygame.Rect(50, 400, 700, 150)
         pygame.draw.rect(self.screen, (50, 50, 50), dialog_box)
         pygame.draw.rect(self.screen, WHITE, dialog_box, 3)
         
-        # NPCの名前
+        # NPC name
         if self.dialog_npc:
             npc_name = self.assets.render_text(self.dialog_npc["name"], "normal", (255, 255, 0))
             self.screen.blit(npc_name, (70, 420))
         
-        # ダイアログテキスト
-        dialog_text = self.assets.render_text(self.dialog, "normal", WHITE)
-        self.screen.blit(dialog_text, (70, 460))
+        # Dialog text - handle word wrapping
+        max_width = 660  # Maximum width for text
+        line_height = 24  # Height of each line
+        y_position = 460  # Starting Y position
         
-        # 続行指示
+        # Split text into lines
+        lines = []
+        words = self.dialog.split()
+        current_line = ""
+        
+        for word in words:
+            # Check if adding this word would exceed the max width
+            test_line = current_line + word + " "
+            test_text = self.assets.render_text(test_line, "normal", WHITE)
+            
+            if test_text.get_width() > max_width:
+                # Line would be too long, add current line to lines and start a new one
+                lines.append(current_line)
+                current_line = word + " "
+            else:
+                # Add word to current line
+                current_line = test_line
+        
+        # Add the last line
+        if current_line:
+            lines.append(current_line)
+        
+        # Draw each line
+        for line in lines:
+            line_text = self.assets.render_text(line, "normal", WHITE)
+            self.screen.blit(line_text, (70, y_position))
+            y_position += line_height
+            
+            # Prevent text from going outside the dialog box
+            if y_position > 520:
+                break
+        
+        # Continue instruction
         continue_text = self.assets.render_text("Click to continue", "small", (200, 200, 200))
         self.screen.blit(continue_text, (650, 520))
         
     def move_player(self, dx, dy):
-        """プレイヤーを移動"""
+        """Move the player"""
         try:
             new_x = self.player["tile_x"] + dx
             new_y = self.player["tile_y"] + dy
             
-            # マップ範囲内かつ歩行可能かチェック
+            # Check if within map bounds and walkable
             if self.map_manager.current_map.is_walkable(new_x, new_y):
                 self.player["tile_x"] = new_x
                 self.player["tile_y"] = new_y
                 
-                # NPCとの会話
-                npc = self.map_manager.current_map.get_npc_at(new_x, new_y)
-                if npc:
-                    self.start_dialog(npc["dialog"], npc)
-                    
-                # ポータルでのマップ移動
+                # Update position in player data for saving
+                self.player["position"] = [new_x, new_y]
+                
+                # Check for portals
                 portal = self.map_manager.current_map.get_portal_at(new_x, new_y)
                 if portal:
-                    self.change_map(portal["destination"], portal["dest_x"], portal["dest_y"])
+                    # Check if the destination town is discovered
+                    if portal["destination"] in self.discovered_towns:
+                        self.change_map(portal["destination"], portal["dest_x"], portal["dest_y"])
+                        
+                        # Update quest progress if entering Computing Town
+                        if portal["destination"] == "Computing Town" and "explore_computing_town" in self.quest_system.active_quests:
+                            self.quest_system.complete_quest("explore_computing_town")
+                            # Add new quest
+                            self.quest_system.add_quest("defeat_sql_injection")
+                            # Save game after quest completion
+                            self.save_game()
+                    else:
+                        # Show message that the town is not yet discovered
+                        self.start_dialog(f"You can see {portal['destination']} in the distance, but you don't know how to get there yet. Complete more quests to discover this location.")
                     
-                    # Computing Townに入った場合、クエスト進行状況を更新
-                    if portal["destination"] == "Computing Town" and "explore_computing_town" in self.quest_system.active_quests:
-                        self.quest_system.complete_quest("explore_computing_town")
-                        # 新しいクエストを追加
-                        self.quest_system.add_quest("defeat_sql_injection")
-                    
-                # ショップ
-                shop = self.map_manager.current_map.get_shop_at(new_x, new_y)
-                if shop:
-                    self.start_shop(shop)
-                    
-                # ランダムエンカウント
+                # Random encounters
                 if random.random() < self.map_manager.current_map.encounter_rate:
-                    # クエスト進行状況に応じて敵タイプを変更
+                    # Adjust enemy type based on quest progress
                     if "defeat_sql_injection" in self.quest_system.active_quests:
                         self.start_battle("sql_injection")
-                        # クエスト完了
+                        # Complete quest
                         self.quest_system.complete_quest("defeat_sql_injection")
-                        # 最終クエストを追加
+                        # Add final quest
                         self.quest_system.add_quest("final_battle")
+                        # Save game after quest completion
+                        self.save_game()
                     elif "final_battle" in self.quest_system.active_quests:
-                        # 最終ボス戦
+                        # Final boss battle
                         self.start_battle("boss")
-                        # クエスト完了
+                        # Complete quest
                         self.quest_system.complete_quest("final_battle")
+                        # Save game after quest completion
+                        self.save_game()
                     else:
                         self.start_battle(random.choice(["weak", "normal", "strong"]))
                     
@@ -1143,36 +1285,48 @@ class Game:
                 
             return False
         except Exception as e:
-            print(f"プレイヤー移動中のエラー: {e}")
+            print(f"Error during player movement: {e}")
             return False
+            
+    def rest_at_inn(self):
+        """Rest at the inn to recover HP and MP"""
+        # Show dialog
+        self.start_dialog("Welcome to the Inn! Your HP and MP have been fully restored. Have a nice day!")
+        
+        # Restore player's HP and MP
+        self.player["hp"] = self.player["max_hp"]
+        self.player["mp"] = self.player["max_mp"]
+        
+        # Play a sound effect if available
+        # self.assets.play_sound("heal")
     def start_dialog(self, text, npc=None):
-        """ダイアログを開始"""
+        """Start a dialog"""
         self.state = STATE_DIALOG
         self.dialog = text
         self.dialog_npc = npc
         
-        # NPCがAWSサービスの場合、仲間にするオプションを表示
+        # If NPC is an AWS service, show option to recruit
         if npc and "is_service" in npc and npc["is_service"]:
-            self.dialog += "\n\n[R]キーを押して仲間にするクイズに挑戦"
+            self.dialog += "\n\nPress [R] key to take the quiz and recruit me as a party member."
             self.dialog_npc_is_service = True
         else:
             self.dialog_npc_is_service = False
             
     def start_battle(self, enemy_type="normal"):
-        """バトルを開始"""
+        """Start a battle"""
         try:
             self.state = STATE_BATTLE
-            # ボス戦の場合
+            # Boss battle
             if enemy_type == "boss":
                 self.battle_system.start_battle("ddos")
             else:
                 self.battle_system.start_battle(enemy_type)
         except Exception as e:
-            print(f"バトル開始中のエラー: {e}")
+            print(f"Error starting battle: {e}")
             self.state = STATE_GAME
             
     def change_map(self, map_name, player_x, player_y):
-        """マップを変更"""
+        """Change the current map"""
         try:
             new_map = self.map_manager.get_map(map_name)
             if new_map:
@@ -1180,7 +1334,7 @@ class Game:
                 self.player["tile_x"] = player_x
                 self.player["tile_y"] = player_y
         except Exception as e:
-            print(f"マップ変更中のエラー: {e}")
+            print(f"Error changing map: {e}")
 
     def start_shop(self, shop):
         """ショップを開始"""
@@ -1189,112 +1343,422 @@ class Game:
         self.shop_system.active = True
         self.start_dialog(shop["dialog"], {"name": shop["name"]})
 
-if __name__ == "__main__":
-    game = Game()
-    game.run()
-
+# Define save_game as a standalone function first
+        return False
 
 if __name__ == "__main__":
     game = Game()
+    Game.instance = game  # Set the global instance
     game.run()
-    def handle_event(self, event):
-        """イベント処理"""
-        if self.state == STATE_TITLE:
-            # タイトル画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                start_button, load_button, quit_button = self.draw_title_screen()
-                if start_button.collidepoint(event.pos):
-                    self.state = STATE_GAME
-                    self.init_game()
-                elif load_button.collidepoint(event.pos):
-                    self.load_game()
-                elif quit_button.collidepoint(event.pos):
-                    self.running = False
-                    
-        elif self.state == STATE_GAME:
-            # ゲーム画面
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_w or event.key == pygame.K_UP:
-                    self.move_player(0, -1)
-                elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
-                    self.move_player(0, 1)
-                elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
-                    self.move_player(-1, 0)
-                elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
-                    self.move_player(1, 0)
-                elif event.key == pygame.K_m:
-                    self.state = STATE_MENU
-                elif event.key == pygame.K_q:
-                    self.state = STATE_QUEST_LOG
-                elif event.key == pygame.K_i:
-                    self.state = STATE_INVENTORY
-                elif event.key == pygame.K_r and self.dialog_npc_is_service and self.dialog_npc and "name" in self.dialog_npc:
-                    # AWSサービスの仲間にするクイズを開始
-                    self.state = STATE_RECRUITMENT
-                    self.recruitment_system.start_recruitment(self.dialog_npc["name"].lower())
-                    
-        elif self.state == STATE_DIALOG:
-            # ダイアログ画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                self.state = STATE_GAME
+            
+    def load_game(self):
+        """Load a saved game"""
+        try:
+            if not os.path.exists(self.save_file):
+                print("No save file found")
+                return False
                 
-        elif self.state == STATE_BATTLE:
-            # バトル画面
-            self.battle_system.handle_event(event)
-            if self.battle_system.battle_ended:
-                if self.battle_system.battle_result == "win":
-                    self.state = STATE_GAME
-                else:
-                    self.state = STATE_GAME_OVER
+            with open(self.save_file, 'r') as f:
+                save_data = json.load(f)
+                
+            # Load player data
+            self.player = save_data["player"]
+            
+            # Load party members
+            self.party = save_data["party"]
+            
+            # Load map
+            map_name = save_data["current_map"]
+            self.map_manager.generate_maps()
+            self.map_manager.current_map = self.map_manager.get_map(map_name)
+            
+            # Load player position
+            if "position" in save_data:
+                self.player["tile_x"] = save_data["position"][0]
+                self.player["tile_y"] = save_data["position"][1]
+            
+            # Load quests
+            if "quests" in save_data:
+                self.quest_system.active_quests = save_data["quests"]["active"]
+                self.quest_system.completed_quests = save_data["quests"]["completed"]
+            
+            # Load discovered towns
+            if "discovered_towns" in save_data:
+                self.discovered_towns = save_data["discovered_towns"]
+            else:
+                # Default to just Computing Town if not in save file
+                self.discovered_towns = ["Computing Town"]
+                
+            # Start game
+            self.state = STATE_GAME
+            
+            print("Game loaded successfully")
+            return True
+        except Exception as e:
+            print(f"Error loading game: {e}")
+            return False
+    def check_for_npc_interaction(self):
+        """Check for NPCs near the player and initiate dialog"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check for NPCs in adjacent tiles
+        npc = self.map_manager.current_map.get_npc_at(player_x, player_y)
+        if npc:
+            print(f"E key pressed: Talking to {npc['name']}")
+            self.start_dialog(npc["dialog"], npc)
+            
+            # If this is a service NPC, check if we can recruit them
+            if "is_service" in npc and npc["is_service"]:
+                self.dialog_npc_is_service = True
+            return True
+            
+        print(f"E key pressed. Player position: ({player_x}, {player_y})")
+        print("No NPC found nearby")
+        return False
+    def check_for_shop_interaction(self):
+        """Check for shops near the player and initiate shop interaction"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check for shops in adjacent tiles
+        shop = self.map_manager.current_map.get_shop_at(player_x, player_y)
+        if shop:
+            print(f"E key pressed: Entering shop {shop['name']}")
+            self.start_shop(shop)
+            return True
+            
+        return False
+    def check_for_inn_interaction(self):
+        """Check if player is at an inn and initiate rest"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check if player is on an inn tile
+        if 0 <= player_x < self.map_manager.current_map.width and 0 <= player_y < self.map_manager.current_map.height:
+            if self.map_manager.current_map.tiles[player_y][player_x] == TILE_INN:
+                print(f"E key pressed: Resting at inn")
+                self.rest_at_inn()
+                return True
+                
+        return False
+    def save_game(self):
+        """Save the current game state"""
+        try:
+            save_data = {
+                "player": self.player,
+                "party": self.party,
+                "current_map": self.map_manager.current_map.name,
+                "position": [self.player["tile_x"], self.player["tile_y"]],
+                "quests": {
+                    "active": self.quest_system.active_quests,
+                    "completed": self.quest_system.completed_quests
+                }
+            }
+            
+            with open(self.save_file, 'w') as f:
+                json.dump(save_data, f)
+                
+            print(f"Game saved successfully to {self.save_file}")
+            return True
+        except Exception as e:
+            print(f"Error saving game: {e}")
+            return False
+    def handle_events(self):
+        """Handle game events"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                
+            # Handle keyboard events
+            if event.type == pygame.KEYDOWN:
+                # ESC key handling
+                if event.key == pygame.K_ESCAPE:
+                    if self.state == STATE_TITLE:
+                        self.running = False
+                    elif self.state == STATE_MENU:
+                        self.state = STATE_GAME
+                        self.menu_system.active = False
+                    elif self.state == STATE_QUEST_LOG:
+                        self.state = STATE_GAME
+                    elif self.state == STATE_INVENTORY:
+                        self.state = STATE_GAME
+                        self.item_system.active = False
+                    # Disable ESC key during battle
+                    elif self.state == STATE_BATTLE:
+                        pass  # Do nothing
+                    else:
+                        # Return to game screen for other states
+                        self.state = STATE_GAME
+                        
+                # Show quest log
+                if event.key == pygame.K_q and self.state == STATE_GAME:
+                    self.state = STATE_QUEST_LOG
+                        
+                # Game screen controls
+                if self.state == STATE_GAME:
+                    moved = False
                     
-        elif self.state == STATE_MENU:
-            # メニュー画面
+                    if event.key == pygame.K_UP:
+                        moved = self.move_player(0, -1)
+                    elif event.key == pygame.K_DOWN:
+                        moved = self.move_player(0, 1)
+                    elif event.key == pygame.K_LEFT:
+                        moved = self.move_player(-1, 0)
+                    elif event.key == pygame.K_RIGHT:
+                        moved = self.move_player(1, 0)
+                    elif event.key == pygame.K_m:
+                        self.state = STATE_MENU
+                        self.menu_system.active = True
+                    elif event.key == pygame.K_i:
+                        self.state = STATE_INVENTORY
+                        self.item_system.active = True
+                    elif event.key == pygame.K_e:
+                        # Check for nearby NPCs, shops, or inns to interact with
+                        try:
+                            if not self.check_for_npc_interaction():
+                                if not self.check_for_shop_interaction():
+                                    self.check_for_inn_interaction()
+                        except Exception as e:
+                            print(f"Event handling error: {e}")
+                    
+                    # Check for random encounters after movement
+                    if moved:
+                        self.steps += 1
+                        if self.map_manager.current_map.check_random_encounter():
+                            self.start_battle()
+                            
+            # Mouse input
             if event.type == pygame.MOUSEBUTTONDOWN:
-                save_button, quit_button, back_button = self.draw_menu_screen()
-                if save_button.collidepoint(event.pos):
-                    self.save_game()
-                elif quit_button.collidepoint(event.pos):
-                    self.running = False
-                elif back_button.collidepoint(event.pos):
-                    self.state = STATE_GAME
+                # Title screen
+                if self.state == STATE_TITLE:
+                    if self.title_buttons["new_game"].collidepoint(event.pos):
+                        self.start_new_game()
+                    elif self.title_buttons["continue"].collidepoint(event.pos):
+                        self.load_game()
+                    elif self.title_buttons["exit"].collidepoint(event.pos):
+                        self.running = False
+                
+                # Battle screen
+                elif self.state == STATE_BATTLE:
+                    try:
+                        # Pass event to battle system, only change state if battle is over
+                        if self.battle_system.handle_event(event):
+                            # Post-battle processing
+                            if self.battle_system.state == "victory":
+                                # If boss was defeated
+                                if self.battle_system.enemy["name"] == "DDoS Attack":
+                                    # Start ending cutscene
+                                    self.state = STATE_CUTSCENE
+                                    self.cutscene_system.start_ending()
+                                else:
+                                    self.state = STATE_GAME
+                            elif self.battle_system.state == "defeat":
+                                # Go to game over screen on defeat
+                                self.state = STATE_GAME_OVER
+                            elif self.battle_system.state == "escape":
+                                self.state = STATE_GAME
+                            # Otherwise don't change state (battle continues)
+                    except Exception as e:
+                        print(f"Battle handling error: {e}")
+                        # Return to game screen only on error
+                        self.state = STATE_GAME
+                
+                # Dialog screen
+                elif self.state == STATE_DIALOG:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        # EC2 quest completion handling
+                        if self.dialog_npc and self.dialog_npc["name"] == "EC2" and "meet_ec2" in self.quest_system.active_quests:
+                            print("Completing EC2 quest")
+                            self.quest_system.complete_quest("meet_ec2")
+                            # Add new quest
+                            self.quest_system.add_quest("ec2_quest")
+                            # Save game after quest completion
+                            try:
+                                self.save_game()
+                            except Exception as e:
+                                print(f"Save error: {e}")
+                        
+                        self.state = STATE_GAME
+                        self.dialog = None
+                        self.dialog_npc = None
+                
+                # Menu screen
+                elif self.state == STATE_MENU:
+                    try:
+                        result = self.menu_system.handle_event(event)
+                        if result == "title":
+                            self.state = STATE_TITLE
+                        elif result:
+                            self.state = STATE_GAME
+                    except Exception as e:
+                        print(f"Menu handling error: {e}")
+                        self.state = STATE_GAME
+                
+                # Cutscene screen
+                elif self.state == STATE_CUTSCENE:
+                    try:
+                        if not self.cutscene_system.active or not self.cutscene_system.handle_event(event):
+                            # When cutscene ends
+                            self.next_scene()
+                    except Exception as e:
+                        print(f"Cutscene handling error: {e}")
+                        # Return to game screen on error
+                        self.state = STATE_GAME
+                
+                # Quest log screen
+                elif self.state == STATE_QUEST_LOG:
+                    try:
+                        if hasattr(self, 'quest_log_close_button') and self.quest_log_close_button.collidepoint(event.pos):
+                            self.state = STATE_GAME
+                    except Exception as e:
+                        print(f"Quest log handling error: {e}")
+                        self.state = STATE_GAME
+                        
+                # Recruitment system screen
+                elif self.state == STATE_RECRUITMENT:
+                    try:
+                        print("Recruitment system screen mouse click")
+                        if self.recruitment_system.handle_event(event):
+                            print(f"Recruitment system state: {self.recruitment_system.state}")
+                            if self.recruitment_system.state == "inactive":
+                                self.state = STATE_GAME
+                    except Exception as e:
+                        print(f"Recruitment system handling error: {e}")
+                        self.state = STATE_GAME
+                        
+                # Shop screen
+                elif self.state == STATE_SHOP:
+                    try:
+                        if self.shop_system.handle_event(event):
+                            self.state = STATE_GAME
+                    except Exception as e:
+                        print(f"Shop handling error: {e}")
+                        self.state = STATE_GAME
+                        
+                # Inventory screen
+                elif self.state == STATE_INVENTORY:
+                    try:
+                        if self.item_system.handle_event(event):
+                            self.state = STATE_GAME
+                    except Exception as e:
+                        print(f"Inventory handling error: {e}")
+                        self.state = STATE_GAME
+                        
+                # Game over screen
+                elif self.state == STATE_GAME_OVER:
+                    try:
+                        continue_button, title_button = self.draw_game_over_screen()
+                        if continue_button.collidepoint(event.pos):
+                            self.load_game()
+                        elif title_button.collidepoint(event.pos):
+                            self.state = STATE_TITLE
+                    except Exception as e:
+                        print(f"Game over handling error: {e}")
+                        self.state = STATE_TITLE
+    def check_for_npc_interaction(self):
+        """Check for NPCs near the player and initiate dialog"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check for NPCs in adjacent tiles
+        npc = self.map_manager.current_map.get_npc_at(player_x, player_y)
+        if npc:
+            print(f"E key pressed: Talking to {npc['name']}")
+            self.start_dialog(npc["dialog"], npc)
+            
+            # If this is a service NPC, check if we can recruit them
+            if "is_service" in npc and npc["is_service"]:
+                self.dialog_npc_is_service = True
+            return True
+            
+        print(f"E key pressed. Player position: ({player_x}, {player_y})")
+        print("No NPC found nearby")
+        return False
+    def check_for_shop_interaction(self):
+        """Check for shops near the player and initiate shop interaction"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check for shops in adjacent tiles
+        shop = self.map_manager.current_map.get_shop_at(player_x, player_y)
+        if shop:
+            print(f"E key pressed: Entering shop {shop['name']}")
+            self.start_shop(shop)
+            return True
+            
+        return False
+    def check_for_inn_interaction(self):
+        """Check if player is at an inn and initiate rest"""
+        player_x = self.player["tile_x"]
+        player_y = self.player["tile_y"]
+        
+        # Check if player is on an inn tile
+        if 0 <= player_x < self.map_manager.current_map.width and 0 <= player_y < self.map_manager.current_map.height:
+            if self.map_manager.current_map.tiles[player_y][player_x] == TILE_INN:
+                print(f"E key pressed: Resting at inn")
+                self.rest_at_inn()
+                return True
+                
+        return False
+Game = None  # Will be set at the end of the file
+
+class QuestSystem:
+    def __init__(self, player, assets):
+        self.player = player
+        self.assets = assets
+        self.active_quests = []
+        self.completed_quests = []
+        
+    def complete_quest(self, quest_id):
+        """Complete a quest"""
+        if quest_id in self.active_quests:
+            self.active_quests.remove(quest_id)
+            self.completed_quests.append(quest_id)
+            
+            # Add to player's completed quests list
+            if "completed_quests" not in self.player:
+                self.player["completed_quests"] = []
+            self.player["completed_quests"].append(quest_id)
+            
+            # Get quest data from the game
+            quest_data = Game.instance.quest_system.quest_data[quest_id]
+            
+            # Give rewards
+            reward = quest_data["reward"]
+            self.player["exp"] += reward["exp"]
+            self.player["credits"] += reward["credits"]
+            
+            # Check if this quest unlocks a new town
+            if "unlocks_town" in quest_data:
+                town_name = quest_data["unlocks_town"]
+                # Add the town to discovered towns if it's not already there
+                if town_name not in Game.instance.discovered_towns:
+                    Game.instance.discovered_towns.append(town_name)
+                    Game.instance.start_dialog(f"You have discovered {town_name}! You can now travel there.")
                     
-        elif self.state == STATE_CUTSCENE:
-            # カットシーン画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if self.cutscene_system.proceed():
-                    self.state = STATE_GAME
-                    
-        elif self.state == STATE_QUEST_LOG:
-            # クエストログ画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                back_button = self.draw_quest_log_screen()
-                if back_button.collidepoint(event.pos):
-                    self.state = STATE_GAME
-                    
-        elif self.state == STATE_RECRUITMENT:
-            # 仲間にする画面
-            if self.recruitment_system.handle_event(event):
-                if self.recruitment_system.state == "inactive":
-                    self.state = STATE_GAME
-                    
-        elif self.state == STATE_SHOP:
-            # ショップ画面
-            if self.shop_system.handle_event(event):
-                if not self.shop_system.active:
-                    self.state = STATE_GAME
-                    
-        elif self.state == STATE_INVENTORY:
-            # インベントリ画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                back_button = self.draw_inventory_screen()
-                if back_button.collidepoint(event.pos):
-                    self.state = STATE_GAME
-                    
-        elif self.state == STATE_GAME_OVER:
-            # ゲームオーバー画面
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                continue_button, title_button = self.draw_game_over_screen()
-                if continue_button.collidepoint(event.pos):
-                    self.load_game()
-                elif title_button.collidepoint(event.pos):
-                    self.state = STATE_TITLE
+            return reward
+        return None
+    def save_game(self):
+        """Save the current game state"""
+        try:
+            save_data = {
+                "player": self.player,
+                "party": self.party,
+                "current_map": self.map_manager.current_map.name,
+                "position": [self.player["tile_x"], self.player["tile_y"]],
+                "quests": {
+                    "active": self.quest_system.active_quests,
+                    "completed": self.quest_system.completed_quests
+                },
+                "discovered_towns": self.discovered_towns
+            }
+            
+            with open(self.save_file, 'w') as f:
+                json.dump(save_data, f)
+                
+            print(f"Game saved successfully to {self.save_file}")
+            return True
+        except Exception as e:
+            print(f"Error saving game: {e}")
+            return False

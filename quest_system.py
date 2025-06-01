@@ -11,108 +11,120 @@ class QuestSystem:
         self.active_quests = []
         self.completed_quests = []
         
-        # クエストデータ
+        # Quest data
         self.quest_data = {
             "meet_ec2": {
-                "title": "EC2と出会う",
-                "description": "コンピューティング町でEC2と会話する",
+                "title": "Meet EC2",
+                "description": "Talk to EC2 in Computing Town",
                 "reward": {"exp": 50, "credits": 100}
             },
             "explore_computing_town": {
-                "title": "コンピューティング町を探索",
-                "description": "コンピューティング町を隅々まで探索する",
-                "reward": {"exp": 50, "credits": 100}
+                "title": "Explore Computing Town",
+                "description": "Explore Computing Town thoroughly",
+                "reward": {"exp": 50, "credits": 100},
+                "unlocks_town": "Storage Town"
             },
             "ec2_quest": {
-                "title": "EC2の依頼",
-                "description": "EC2からの依頼を完了する",
+                "title": "EC2's Request",
+                "description": "Complete the request from EC2",
                 "reward": {"exp": 100, "credits": 200}
             },
             "defeat_sql_injection": {
-                "title": "SQLインジェクションを撃退",
-                "description": "コンピューティング町を襲うSQLインジェクションを倒す",
-                "reward": {"exp": 150, "credits": 300}
+                "title": "Defeat SQL Injection",
+                "description": "Defeat the SQL Injection attacking Computing Town",
+                "reward": {"exp": 150, "credits": 300},
+                "unlocks_town": "Database Town"
             },
             "s3_quest": {
-                "title": "S3の依頼",
-                "description": "S3からの依頼を完了する",
+                "title": "S3's Request",
+                "description": "Complete the request from S3",
                 "reward": {"exp": 100, "credits": 200}
             },
             "secure_data": {
-                "title": "データを保護",
-                "description": "ストレージ町のデータ漏洩を防ぐ",
-                "reward": {"exp": 150, "credits": 300}
+                "title": "Secure the Data",
+                "description": "Prevent data leakage in Storage Town",
+                "reward": {"exp": 150, "credits": 300},
+                "unlocks_town": "Security Town"
             },
             "dynamodb_quest": {
-                "title": "DynamoDBの依頼",
-                "description": "DynamoDBからの依頼を完了する",
+                "title": "DynamoDB's Request",
+                "description": "Complete the request from DynamoDB",
                 "reward": {"exp": 100, "credits": 200}
             },
             "rds_quest": {
-                "title": "RDSの依頼",
-                "description": "RDSからの依頼を完了する",
+                "title": "RDS's Request",
+                "description": "Complete the request from RDS",
                 "reward": {"exp": 100, "credits": 200}
             },
             "iam_quest": {
-                "title": "IAMの依頼",
-                "description": "IAMからの依頼を完了する",
+                "title": "IAM's Request",
+                "description": "Complete the request from IAM",
                 "reward": {"exp": 100, "credits": 200}
             },
             "final_battle": {
-                "title": "最終決戦",
-                "description": "DDoS攻撃から世界を守る",
+                "title": "Final Battle",
+                "description": "Protect the world from the DDoS Attack",
                 "reward": {"exp": 300, "credits": 500}
             }
         }
         
     def add_quest(self, quest_id):
-        """クエストを追加"""
+        """Add a quest"""
         if quest_id in self.quest_data and quest_id not in self.active_quests and quest_id not in self.completed_quests:
             self.active_quests.append(quest_id)
             return True
         return False
         
     def complete_quest(self, quest_id):
-        """クエストを完了"""
+        """Complete a quest"""
         if quest_id in self.active_quests:
             self.active_quests.remove(quest_id)
             self.completed_quests.append(quest_id)
             
-            # プレイヤーの完了クエストリストに追加
+            # Add to player's completed quests list
             if "completed_quests" not in self.player:
                 self.player["completed_quests"] = []
             self.player["completed_quests"].append(quest_id)
             
-            # 報酬の付与
+            # Give rewards
             reward = self.quest_data[quest_id]["reward"]
             self.player["exp"] += reward["exp"]
             self.player["credits"] += reward["credits"]
             
+            # Check if this quest unlocks a new town
+            if "unlocks_town" in self.quest_data[quest_id]:
+                town_name = self.quest_data[quest_id]["unlocks_town"]
+                # Add the town to discovered towns if it's not already there
+                from main import Game
+                if Game.instance and town_name not in Game.instance.discovered_towns:
+                    Game.instance.discovered_towns.append(town_name)
+                    Game.instance.start_dialog(f"You have discovered {town_name}! You can now travel there.")
+                    
             return reward
         return None
         
     def get_quest_details(self, quest_id):
-        """クエストの詳細を取得"""
+        """Get quest details"""
         return self.quest_data.get(quest_id)
         
     def draw_quest_log(self, screen):
-        """クエストログを描画"""
+        """Draw the quest log"""
         try:
-            # 背景オーバーレイ
+            # Background overlay
             overlay = pygame.Surface((800, 600), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 180))
             screen.blit(overlay, (0, 0))
             
-            # パネル
+            # Panel
             panel = pygame.Rect(100, 100, 600, 400)
             pygame.draw.rect(screen, (50, 50, 80), panel)
             pygame.draw.rect(screen, WHITE, panel, 2)
             
-            # タイトル
+            # Title
             title_text = self.assets.render_text("Quest Log", "large", WHITE)
             screen.blit(title_text, (400 - title_text.get_width() // 2, 120))
             
-            # アクティブなクエスト
+            # Active quests
             if self.active_quests:
                 active_text = self.assets.render_text("Active Quests:", "normal", YELLOW)
                 screen.blit(active_text, (120, 170))
@@ -126,18 +138,18 @@ class QuestSystem:
                 no_quest_text = self.assets.render_text("No active quests", "normal", WHITE)
                 screen.blit(no_quest_text, (120, 200))
                 
-            # 完了したクエスト
+            # Completed quests
             if self.completed_quests:
                 completed_text = self.assets.render_text("Completed Quests:", "normal", GREEN)
                 screen.blit(completed_text, (120, 300))
                 
-                for i, quest_id in enumerate(self.completed_quests[-5:]):  # 最新の5つだけ表示
+                for i, quest_id in enumerate(self.completed_quests[-5:]):  # Show only the latest 5
                     if quest_id in self.quest_data:
                         quest = self.quest_data[quest_id]
                         quest_text = self.assets.render_text(quest['title'], "small", (200, 200, 200))
                         screen.blit(quest_text, (140, 330 + i * 25))
                     
-            # 閉じるボタン
+            # Close button
             close_button = pygame.Rect(350, 450, 100, 30)
             pygame.draw.rect(screen, (100, 100, 200), close_button)
             pygame.draw.rect(screen, WHITE, close_button, 1)
@@ -147,14 +159,14 @@ class QuestSystem:
             
             return close_button
         except Exception as e:
-            print(f"クエストログ描画中のエラー: {e}")
-            # エラー時は単純なボタンを返す
+            print(f"Error drawing quest log: {e}")
+            # Return a simple button on error
             close_button = pygame.Rect(350, 450, 100, 30)
             pygame.draw.rect(screen, (100, 100, 200), close_button)
             return close_button
         
     def get_current_objective(self):
-        """現在の目標を取得"""
+        """Get the current objective"""
         try:
             if not self.active_quests:
                 return "No active quests"
@@ -166,5 +178,5 @@ class QuestSystem:
             else:
                 return "Objective: Unknown"
         except Exception as e:
-            print(f"目標取得中のエラー: {e}")
+            print(f"Error getting objective: {e}")
             return "Objective: Continue your adventure"

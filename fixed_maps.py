@@ -4,7 +4,7 @@
 import math
 import random
 
-# タイルタイプの定数
+# Tile type constants
 TILE_EMPTY = 0
 TILE_FLOOR = 1
 TILE_WALL = 2
@@ -26,21 +26,19 @@ TILE_FLOWERBED = 17
 TILE_STATUE = 18
 TILE_TABLE = 19
 TILE_CHAIR = 20
-TILE_FOUNTAIN = 13
-TILE_BENCH = 14
-TILE_LAMP = 15
+TILE_INN = 21  # Added inn tile type
 TILE_SIGN = 16
 TILE_FLOWERBED = 17
 
 # 固定マップデータ
 def get_world_map():
-    """メインワールドマップのデータを返す"""
-    # 50x50のマップを作成
+    """Return the main world map data"""
+    # Create a 50x50 map
     width = 50
     height = 50
     tiles = [[TILE_GRASS for _ in range(width)] for _ in range(height)]
     
-    # 外周を壁に
+    # Surround with walls
     for x in range(width):
         tiles[0][x] = TILE_WALL
         tiles[height-1][x] = TILE_WALL
@@ -239,20 +237,20 @@ def get_world_map():
         {
             "x": 25,
             "y": 20,
-            "name": "旅人",
-            "dialog": "この世界には4つの町があるよ。北西にComputing Town、北東にStorage Town、南西にDatabase Town、南東にSecurity Townだ。"
-        },
-        {
-            "x": 30,
-            "y": 25,
-            "name": "商人",
-            "dialog": "各町にはそれぞれ特色のあるショップがあるぞ。Computing Townは武器、Storage Townは防具、Database Townは回復アイテム、Security Townは特殊アイテムを扱っている。"
+            "name": "Traveler",
+            "dialog": "I've heard there's a town called Computing Town to the northwest. You should check it out! They say there are other towns in this world too, but I haven't found them yet."
         },
         {
             "x": 20,
-            "y": 30,
-            "name": "老人",
-            "dialog": "AWSサービスたちは町に住んでいるが、彼らの力を借りるにはクイズに答えなければならない。しっかり勉強するんだぞ。"
+            "y": 15,
+            "name": "Explorer",
+            "dialog": "This world is full of mysteries! I've been trying to find all the towns, but some seem to be hidden. Maybe completing quests will reveal their locations?"
+        },
+        {
+            "x": 30,
+            "y": 15,
+            "name": "Merchant",
+            "dialog": "I travel between towns selling my wares. Computing Town is the only one I know of right now, but I've heard rumors of other towns with unique AWS services."
         }
     ]
     
@@ -264,16 +262,17 @@ def get_world_map():
         "tiles": tiles,
         "portals": portals,
         "npcs": npcs,
+        "shops": [],
         "encounter_rate": 0.03
     }
 
 def get_computing_town_map():
-    """Computing Townのマップデータを返す"""
+    """Computing Town map data"""
     width = 30
     height = 30
     tiles = [[TILE_FLOOR for _ in range(width)] for _ in range(height)]
     
-    # 外周を壁に
+    # Surround with walls
     for x in range(width):
         tiles[0][x] = TILE_WALL
         tiles[height-1][x] = TILE_WALL
@@ -281,55 +280,312 @@ def get_computing_town_map():
         tiles[y][0] = TILE_WALL
         tiles[y][width-1] = TILE_WALL
     
-    # 格子状の道路（固定パターン）
-    for x in range(width):
-        if x % 6 == 0:
-            for y in range(height):
-                tiles[y][x] = TILE_ROAD
+    # Main roads - wider and more natural
+    center_x = width // 2
+    center_y = height // 2
     
-    for y in range(height):
-        if y % 6 == 0:
-            for x in range(width):
-                tiles[y][x] = TILE_ROAD
+    # Horizontal main road (wider)
+    for x in range(1, width-1):
+        tiles[center_y][x] = TILE_ROAD
+        tiles[center_y-1][x] = TILE_ROAD
+        tiles[center_y+1][x] = TILE_ROAD
+        
+    # Vertical main road (wider)
+    for y in range(1, height-1):
+        tiles[y][center_x] = TILE_ROAD
+        tiles[y][center_x-1] = TILE_ROAD
+        tiles[y][center_x+1] = TILE_ROAD
     
-    # サーバーラック風の建物（固定位置）
-    rack_positions = [
-        (3, 3, 3, 5),  # (x, y, 幅, 高さ)
-        (10, 3, 3, 5),
-        (17, 3, 3, 5),
-        (24, 3, 3, 5),
-        (3, 10, 3, 5),
-        (10, 10, 3, 5),
-        (17, 10, 3, 5),
-        (24, 10, 3, 5),
-        (3, 17, 3, 5),
-        (10, 17, 3, 5),
-        (17, 17, 3, 5),
-        (24, 17, 3, 5)
-    ]
+    # Secondary roads - more natural, curved paths
+    # North area road
+    for x in range(5, width-5):
+        road_y = center_y - 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y > 2:
+                tiles[road_y-1][x] = TILE_ROAD
     
-    for x, y, w, h in rack_positions:
-        # 建物の外周を壁に
-        for bx in range(x, x+w):
-            for by in range(y, y+h):
-                if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+    # South area road
+    for x in range(5, width-5):
+        road_y = center_y + 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y < height-2:
+                tiles[road_y+1][x] = TILE_ROAD
+                
+    # East area road
+    for y in range(5, height-5):
+        road_x = center_x + 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x < width-2:
+                tiles[y][road_x+1] = TILE_ROAD
+                
+    # West area road
+    for y in range(5, height-5):
+        road_x = center_x - 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x > 2:
+                tiles[y][road_x-1] = TILE_ROAD
+    
+    # Buildings - properly enclosed with single doors
+    buildings = []
+    
+    # Create shop buildings first (to ensure they're in good locations)
+    # Weapon shop building
+    weapon_shop_x, weapon_shop_y = 5, 5
+    weapon_shop_w, weapon_shop_h = 5, 5
+    
+    # Create weapon shop building
+    for bx in range(weapon_shop_x, weapon_shop_x+weapon_shop_w):
+        for by in range(weapon_shop_y, weapon_shop_y+weapon_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == weapon_shop_x or bx == weapon_shop_x+weapon_shop_w-1 or by == weapon_shop_y or by == weapon_shop_y+weapon_shop_h-1:
                     tiles[by][bx] = TILE_WALL
                 else:
                     tiles[by][bx] = TILE_FLOOR
-        
-        # ドアを追加（建物の下側中央）
-        door_x = x + w // 2
-        door_y = y + h - 1
-        if 0 <= door_x < width and 0 <= door_y < height:
-            tiles[door_y][door_x] = TILE_DOOR
     
-    # 中央に大きなデータセンター
-    for x in range(12, 18):
-        for y in range(10, 16):
-            if x == 12 or x == 17 or y == 10 or y == 15:
-                tiles[y][x] = TILE_WALL
-            else:
-                tiles[y][x] = TILE_FLOOR
+    # Add door to weapon shop
+    door_x = weapon_shop_x + weapon_shop_w//2
+    door_y = weapon_shop_y + weapon_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = weapon_shop_x + weapon_shop_w//2
+    shop_y = weapon_shop_y + weapon_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Armor shop building
+    armor_shop_x, armor_shop_y = 20, 5
+    armor_shop_w, armor_shop_h = 5, 5
+    
+    # Create armor shop building
+    for bx in range(armor_shop_x, armor_shop_x+armor_shop_w):
+        for by in range(armor_shop_y, armor_shop_y+armor_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == armor_shop_x or bx == armor_shop_x+armor_shop_w-1 or by == armor_shop_y or by == armor_shop_y+armor_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to armor shop
+    door_x = armor_shop_x + armor_shop_w//2
+    door_y = armor_shop_y + armor_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = armor_shop_x + armor_shop_w//2
+    shop_y = armor_shop_y + armor_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Item shop building
+    item_shop_x, item_shop_y = 5, 20
+    item_shop_w, item_shop_h = 5, 5
+    
+    # Create item shop building
+    for bx in range(item_shop_x, item_shop_x+item_shop_w):
+        for by in range(item_shop_y, item_shop_y+item_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == item_shop_x or bx == item_shop_x+item_shop_w-1 or by == item_shop_y or by == item_shop_y+item_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to item shop
+    door_x = item_shop_x + item_shop_w//2
+    door_y = item_shop_y + item_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = item_shop_x + item_shop_w//2
+    shop_y = item_shop_y + item_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Inn building
+    inn_x, inn_y = 20, 20
+    inn_w, inn_h = 6, 6
+    
+    # Create inn building
+    for bx in range(inn_x, inn_x+inn_w):
+        for by in range(inn_y, inn_y+inn_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == inn_x or bx == inn_x+inn_w-1 or by == inn_y or by == inn_y+inn_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to inn
+    door_x = inn_x + inn_w//2
+    door_y = inn_y + inn_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place inn tile inside the building
+    inn_tile_x = inn_x + inn_w//2
+    inn_tile_y = inn_y + inn_h//2
+    tiles[inn_tile_y][inn_tile_x] = TILE_INN
+    
+    # Main service buildings (for AWS services)
+    service_buildings = [
+        (12, 12, 6, 6),  # Center - EC2
+        (3, 3, 4, 4),    # Northwest corner - Lambda
+        (23, 3, 4, 4),   # Northeast corner - SQS
+    ]
+    
+    for x, y, w, h in service_buildings:
+        # Create building
+        for bx in range(x, x+w):
+            for by in range(y, y+h):
+                if 1 <= bx < width-1 and 1 <= by < height-1:
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+        
+        # Add door (only one door per building)
+        door_x = x + w//2
+        door_y = y + h - 1
+        if 1 <= door_x < width-1 and 1 <= door_y < height-1:
+            tiles[door_y][door_x] = TILE_DOOR
+        
+        buildings.append((x, y, w, h))
+    
+    # Smaller houses (more of them, scattered around)
+    for _ in range(8):
+        w = random.randint(3, 4)
+        h = random.randint(3, 4)
+        x = random.randint(2, width-w-2)
+        y = random.randint(2, height-h-2)
+        
+        # Check if overlaps with roads or other buildings
+        valid = True
+        for bx in range(x-1, x+w+1):
+            for by in range(y-1, y+h+1):
+                if 0 <= bx < width and 0 <= by < height:
+                    if tiles[by][bx] in [TILE_ROAD, TILE_WALL, TILE_DOOR, TILE_SHOP, TILE_INN]:
+                        valid = False
+                        break
+        
+        if valid:
+            # Create building with proper walls
+            for bx in range(x, x+w):
+                for by in range(y, y+h):
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+            
+            # Add door (only one door per building)
+            door_x = x + w//2
+            door_y = y + h - 1
+            tiles[door_y][door_x] = TILE_DOOR
+            
+            buildings.append((x, y, w, h))
+    
+    # Decorations
+    for _ in range(5):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_FOUNTAIN
+    
+    for _ in range(10):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_BENCH
+    
+    for _ in range(15):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_LAMP
+            
+    # Portal back to world map
+    tiles[height-2][width//2] = TILE_PORTAL
+    
+    # NPCs
+    npcs = [
+        {
+            "x": 14,
+            "y": 14,
+            "name": "EC2",
+            "dialog": "Hello, I'm EC2. I'm the core computing service of AWS. How can I help you?",
+            "is_service": True,
+            "service_id": "ec2"
+        },
+        {
+            "x": 5,
+            "y": 5,
+            "name": "Lambda",
+            "dialog": "Hi, I'm Lambda. I handle serverless computing. Just write your code and don't worry about infrastructure!",
+            "is_service": True,
+            "service_id": "lambda"
+        },
+        {
+            "x": 25,
+            "y": 5,
+            "name": "SQS",
+            "dialog": "I'm SQS, Simple Queue Service. I handle messaging between microservices. I'm useful for loosely coupled application designs.",
+            "is_service": True,
+            "service_id": "sqs"
+        }
+    ]
+    
+    # Portal data
+    portals = [
+        {
+            "x": width//2,
+            "y": height-2,
+            "destination": "AWS Cloud World",
+            "dest_x": 10,
+            "dest_y": 11
+        }
+    ]
+    
+    # Shop data
+    shops = [
+        {
+            "x": weapon_shop_x + weapon_shop_w//2,
+            "y": weapon_shop_y + weapon_shop_h//2,
+            "name": "Computing Weapons",
+            "type": "weapons",
+            "dialog": "Transform computing power into weapons!",
+            "items": ["bronze_sword", "iron_sword", "silver_sword", "compute_blade", "serverless_dagger"]
+        },
+        {
+            "x": armor_shop_x + armor_shop_w//2,
+            "y": armor_shop_y + armor_shop_h//2,
+            "name": "Instance Armory",
+            "type": "armor",
+            "dialog": "Protect yourself with the best instance types!",
+            "items": ["leather_armor", "chain_mail", "instance_shield", "auto_scaling_helmet"]
+        },
+        {
+            "x": item_shop_x + item_shop_w//2,
+            "y": item_shop_y + item_shop_h//2,
+            "name": "EC2 Potions",
+            "type": "items",
+            "dialog": "Recover with computing power!",
+            "items": ["potion_small", "potion_medium", "ether_small", "compute_elixir"]
+        }
+    ]
+    
+    # Return map data
+    return {
+        "name": "Computing Town",
+        "width": width,
+        "height": height,
+        "tiles": tiles,
+        "npcs": npcs,
+        "portals": portals,
+        "shops": shops,
+        "encounter_rate": 0.0  # No random encounters in town
+    }
     
     # データセンターのドア
     tiles[15][14] = TILE_DOOR
@@ -352,7 +608,7 @@ def get_computing_town_map():
             "x": 14,
             "y": 12,
             "name": "EC2",
-            "dialog": "やあ、私はEC2だ。AWSの中核となるコンピューティングサービスだよ。何か手伝えることはある？",
+            "dialog": "Hello, I'm EC2. I'm the core computing service of AWS. How can I help you?",
             "is_service": True,
             "service_id": "ec2"
         },
@@ -360,7 +616,7 @@ def get_computing_town_map():
             "x": 8,
             "y": 8,
             "name": "Lambda",
-            "dialog": "こんにちは、私はLambdaです。サーバーレスコンピューティングを担当しています。コードを実行するだけで、インフラの心配はいりませんよ。",
+            "dialog": "Hi, I'm Lambda. I handle serverless computing. Just write your code and don't worry about infrastructure!",
             "is_service": True,
             "service_id": "lambda"
         },
@@ -368,7 +624,7 @@ def get_computing_town_map():
             "x": 20,
             "y": 8,
             "name": "ECS",
-            "dialog": "私はECS、Elastic Container Serviceです。コンテナ化されたアプリケーションを簡単に実行・管理できますよ。",
+            "dialog": "I'm ECS, Elastic Container Service. I can help you run and manage containerized applications easily.",
             "is_service": True,
             "service_id": "ecs"
         },
@@ -376,7 +632,7 @@ def get_computing_town_map():
             "x": 8,
             "y": 20,
             "name": "Fargate",
-            "dialog": "私はFargateです。ECSやEKSのコンテナをサーバーレスで実行できます。インフラ管理から解放されましょう。",
+            "dialog": "I'm Fargate. I can run ECS and EKS containers in a serverless way. Free yourself from infrastructure management!",
             "is_service": True,
             "service_id": "fargate"
         },
@@ -384,7 +640,7 @@ def get_computing_town_map():
             "x": 20,
             "y": 20,
             "name": "Elastic Beanstalk",
-            "dialog": "私はElastic Beanstalkです。アプリケーションのデプロイと管理を簡素化します。コードをアップロードするだけで環境を自動構築しますよ。",
+            "dialog": "I'm Elastic Beanstalk. I simplify application deployment and management. Just upload your code and I'll build the environment for you.",
             "is_service": True,
             "service_id": "beanstalk"
         },
@@ -392,7 +648,7 @@ def get_computing_town_map():
             "x": 13,
             "y": 13,
             "name": "CloudWatch",
-            "dialog": "私はCloudWatchです。AWSリソースとアプリケーションのモニタリングを担当しています。メトリクスの収集、ログの分析、アラームの設定ができますよ。",
+            "dialog": "I'm CloudWatch. I monitor AWS resources and applications. I can collect metrics, analyze logs, and set up alarms for you.",
             "is_service": True,
             "service_id": "cloudwatch"
         },
@@ -400,7 +656,7 @@ def get_computing_town_map():
             "x": 16,
             "y": 13,
             "name": "CloudFormation",
-            "dialog": "私はCloudFormationです。インフラをコードとして管理できるサービスです。テンプレートを使ってリソースを簡単にデプロイできますよ。",
+            "dialog": "I'm CloudFormation. I help you manage infrastructure as code. You can easily deploy resources using templates.",
             "is_service": True,
             "service_id": "cloudformation"
         },
@@ -408,7 +664,7 @@ def get_computing_town_map():
             "x": 13,
             "y": 16,
             "name": "Step Functions",
-            "dialog": "私はStep Functionsです。サーバーレスワークフローを視覚的に構築できます。複雑な処理を簡単に連携させられますよ。",
+            "dialog": "I'm Step Functions. I help you build serverless workflows visually. You can easily coordinate complex processes with me.",
             "is_service": True,
             "service_id": "stepfunctions"
         },
@@ -416,7 +672,7 @@ def get_computing_town_map():
             "x": 16,
             "y": 16,
             "name": "SQS",
-            "dialog": "私はSQS、Simple Queue Serviceです。マイクロサービス間のメッセージングを担当しています。疎結合なアプリケーション設計に役立ちますよ。",
+            "dialog": "I'm SQS, Simple Queue Service. I handle messaging between microservices. I'm useful for loosely coupled application designs.",
             "is_service": True,
             "service_id": "sqs"
         }
@@ -440,7 +696,7 @@ def get_computing_town_map():
             "y": 15,
             "name": "Computing Weapons",
             "type": "weapons",
-            "dialog": "コンピューティングの力を武器に変えましょう！",
+            "dialog": "Transform computing power into weapons!",
             "items": ["bronze_sword", "iron_sword", "silver_sword", "compute_blade", "serverless_dagger"]
         },
         {
@@ -448,7 +704,7 @@ def get_computing_town_map():
             "y": 3,
             "name": "Instance Armory",
             "type": "armor",
-            "dialog": "最高のインスタンスタイプで身を守りましょう！",
+            "dialog": "Protect yourself with the best instance types!",
             "items": ["leather_armor", "chain_mail", "instance_shield", "auto_scaling_helmet"]
         },
         {
@@ -456,10 +712,16 @@ def get_computing_town_map():
             "y": 15,
             "name": "EC2 Potions",
             "type": "items",
-            "dialog": "コンピューティングパワーで回復しましょう！",
+            "dialog": "Recover with computing power!",
             "items": ["potion_small", "potion_medium", "ether_small", "compute_elixir"]
         }
     ]
+    
+    # タイルにNPCを配置
+    for npc in npcs:
+        x, y = npc["x"], npc["y"]
+        if 0 <= x < width and 0 <= y < height:
+            tiles[y][x] = TILE_NPC
     
     return {
         "name": "Computing Town",
@@ -1024,3 +1286,1011 @@ def add_town_objects(tiles, width, height):
         for j in range(3, height-3, 7):
             if tiles[j][i] == TILE_FLOOR:
                 tiles[j][i] = TILE_FLOWERBED
+def get_storage_town_map():
+    """Storage Town map data"""
+    width = 30
+    height = 30
+    tiles = [[TILE_FLOOR for _ in range(width)] for _ in range(height)]
+    
+    # Surround with walls
+    for x in range(width):
+        tiles[0][x] = TILE_WALL
+        tiles[height-1][x] = TILE_WALL
+    for y in range(height):
+        tiles[y][0] = TILE_WALL
+        tiles[y][width-1] = TILE_WALL
+    
+    # Main roads - wider and more natural
+    center_x = width // 2
+    center_y = height // 2
+    
+    # Horizontal main road (wider)
+    for x in range(1, width-1):
+        tiles[center_y][x] = TILE_ROAD
+        tiles[center_y-1][x] = TILE_ROAD
+        tiles[center_y+1][x] = TILE_ROAD
+        
+    # Vertical main road (wider)
+    for y in range(1, height-1):
+        tiles[y][center_x] = TILE_ROAD
+        tiles[y][center_x-1] = TILE_ROAD
+        tiles[y][center_x+1] = TILE_ROAD
+    
+    # Secondary roads - more natural, curved paths
+    # North area road
+    for x in range(5, width-5):
+        road_y = center_y - 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y > 2:
+                tiles[road_y-1][x] = TILE_ROAD
+    
+    # South area road
+    for x in range(5, width-5):
+        road_y = center_y + 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y < height-2:
+                tiles[road_y+1][x] = TILE_ROAD
+                
+    # East area road
+    for y in range(5, height-5):
+        road_x = center_x + 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x < width-2:
+                tiles[y][road_x+1] = TILE_ROAD
+                
+    # West area road
+    for y in range(5, height-5):
+        road_x = center_x - 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x > 2:
+                tiles[y][road_x-1] = TILE_ROAD
+    
+    # Buildings - properly enclosed with single doors
+    buildings = []
+    
+    # Create shop buildings first (to ensure they're in good locations)
+    # S3 Storage shop building
+    s3_shop_x, s3_shop_y = 5, 5
+    s3_shop_w, s3_shop_h = 5, 5
+    
+    # Create S3 shop building
+    for bx in range(s3_shop_x, s3_shop_x+s3_shop_w):
+        for by in range(s3_shop_y, s3_shop_y+s3_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == s3_shop_x or bx == s3_shop_x+s3_shop_w-1 or by == s3_shop_y or by == s3_shop_y+s3_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to S3 shop
+    door_x = s3_shop_x + s3_shop_w//2
+    door_y = s3_shop_y + s3_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = s3_shop_x + s3_shop_w//2
+    shop_y = s3_shop_y + s3_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Glacier Archive shop building
+    glacier_shop_x, glacier_shop_y = 20, 5
+    glacier_shop_w, glacier_shop_h = 5, 5
+    
+    # Create Glacier shop building
+    for bx in range(glacier_shop_x, glacier_shop_x+glacier_shop_w):
+        for by in range(glacier_shop_y, glacier_shop_y+glacier_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == glacier_shop_x or bx == glacier_shop_x+glacier_shop_w-1 or by == glacier_shop_y or by == glacier_shop_y+glacier_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to Glacier shop
+    door_x = glacier_shop_x + glacier_shop_w//2
+    door_y = glacier_shop_y + glacier_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = glacier_shop_x + glacier_shop_w//2
+    shop_y = glacier_shop_y + glacier_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # EFS shop building
+    efs_shop_x, efs_shop_y = 5, 20
+    efs_shop_w, efs_shop_h = 5, 5
+    
+    # Create EFS shop building
+    for bx in range(efs_shop_x, efs_shop_x+efs_shop_w):
+        for by in range(efs_shop_y, efs_shop_y+efs_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == efs_shop_x or bx == efs_shop_x+efs_shop_w-1 or by == efs_shop_y or by == efs_shop_y+efs_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to EFS shop
+    door_x = efs_shop_x + efs_shop_w//2
+    door_y = efs_shop_y + efs_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = efs_shop_x + efs_shop_w//2
+    shop_y = efs_shop_y + efs_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Inn building
+    inn_x, inn_y = 20, 20
+    inn_w, inn_h = 6, 6
+    
+    # Create inn building
+    for bx in range(inn_x, inn_x+inn_w):
+        for by in range(inn_y, inn_y+inn_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == inn_x or bx == inn_x+inn_w-1 or by == inn_y or by == inn_y+inn_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to inn
+    door_x = inn_x + inn_w//2
+    door_y = inn_y + inn_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place inn tile inside the building
+    inn_tile_x = inn_x + inn_w//2
+    inn_tile_y = inn_y + inn_h//2
+    tiles[inn_tile_y][inn_tile_x] = TILE_INN
+    
+    # Main service buildings (for AWS services)
+    service_buildings = [
+        (12, 12, 6, 6),  # Center - S3
+        (3, 3, 4, 4),    # Northwest corner - EBS
+        (23, 3, 4, 4),   # Northeast corner - EFS
+    ]
+    
+    for x, y, w, h in service_buildings:
+        # Create building
+        for bx in range(x, x+w):
+            for by in range(y, y+h):
+                if 1 <= bx < width-1 and 1 <= by < height-1:
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+        
+        # Add door (only one door per building)
+        door_x = x + w//2
+        door_y = y + h - 1
+        if 1 <= door_x < width-1 and 1 <= door_y < height-1:
+            tiles[door_y][door_x] = TILE_DOOR
+        
+        buildings.append((x, y, w, h))
+    
+    # Smaller houses (more of them, scattered around)
+    for _ in range(8):
+        w = random.randint(3, 4)
+        h = random.randint(3, 4)
+        x = random.randint(2, width-w-2)
+        y = random.randint(2, height-h-2)
+        
+        # Check if overlaps with roads or other buildings
+        valid = True
+        for bx in range(x-1, x+w+1):
+            for by in range(y-1, y+h+1):
+                if 0 <= bx < width and 0 <= by < height:
+                    if tiles[by][bx] in [TILE_ROAD, TILE_WALL, TILE_DOOR, TILE_SHOP, TILE_INN]:
+                        valid = False
+                        break
+        
+        if valid:
+            # Create building with proper walls
+            for bx in range(x, x+w):
+                for by in range(y, y+h):
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+            
+            # Add door (only one door per building)
+            door_x = x + w//2
+            door_y = y + h - 1
+            tiles[door_y][door_x] = TILE_DOOR
+            
+            buildings.append((x, y, w, h))
+    
+    # Decorations
+    for _ in range(5):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_FOUNTAIN
+    
+    for _ in range(10):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_BENCH
+    
+    for _ in range(15):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_LAMP
+            
+    # Portal back to world map
+    tiles[height-2][width//2] = TILE_PORTAL
+    
+    # NPCs
+    npcs = [
+        {
+            "x": 14,
+            "y": 14,
+            "name": "S3",
+            "dialog": "Hello, I'm S3. I provide scalable object storage for all your data needs. You can store and retrieve any amount of data, anytime, anywhere!",
+            "is_service": True,
+            "service_id": "s3"
+        },
+        {
+            "x": 5,
+            "y": 5,
+            "name": "EBS",
+            "dialog": "Hi, I'm EBS. I provide block storage volumes for your EC2 instances. I'm like a hard drive for your cloud servers!",
+            "is_service": True,
+            "service_id": "ebs"
+        },
+        {
+            "x": 25,
+            "y": 5,
+            "name": "EFS",
+            "dialog": "I'm EFS, Elastic File System. I provide scalable file storage for your EC2 instances. Multiple instances can access me simultaneously!",
+            "is_service": True,
+            "service_id": "efs"
+        },
+        {
+            "x": 5,
+            "y": 25,
+            "name": "Glacier",
+            "dialog": "I'm Glacier. I provide low-cost archive storage. If you don't need to access your data frequently, I'm your best choice!",
+            "is_service": True,
+            "service_id": "glacier"
+        },
+        {
+            "x": 25,
+            "y": 25,
+            "name": "Storage Gateway",
+            "dialog": "I'm Storage Gateway. I connect your on-premises applications with AWS cloud storage. I'm the bridge between your data center and the cloud!",
+            "is_service": True,
+            "service_id": "storage_gateway"
+        }
+    ]
+    
+    # Portal data
+    portals = [
+        {
+            "x": width//2,
+            "y": height-2,
+            "destination": "AWS Cloud World",
+            "dest_x": 10,
+            "dest_y": 11
+        }
+    ]
+    
+    # Shop data
+    shops = [
+        {
+            "x": s3_shop_x + s3_shop_w//2,
+            "y": s3_shop_y + s3_shop_h//2,
+            "name": "S3 Storage Shop",
+            "type": "items",
+            "dialog": "Welcome to S3 Storage Shop! We have the best storage items!",
+            "items": ["storage_potion", "backup_scroll", "data_shield", "cloud_elixir"]
+        },
+        {
+            "x": glacier_shop_x + glacier_shop_w//2,
+            "y": glacier_shop_y + glacier_shop_h//2,
+            "name": "Glacier Archive",
+            "type": "weapons",
+            "dialog": "Welcome to Glacier Archive! Our weapons are cold but powerful!",
+            "items": ["ice_sword", "frost_dagger", "glacier_axe", "archive_staff"]
+        },
+        {
+            "x": efs_shop_x + efs_shop_w//2,
+            "y": efs_shop_y + efs_shop_h//2,
+            "name": "EFS Equipment",
+            "type": "armor",
+            "dialog": "Welcome to EFS Equipment! Our armor is shared across all warriors!",
+            "items": ["elastic_shield", "scalable_helmet", "shared_breastplate", "file_boots"]
+        }
+    ]
+    
+    # Return map data
+    return {
+        "name": "Storage Town",
+        "width": width,
+        "height": height,
+        "tiles": tiles,
+        "npcs": npcs,
+        "portals": portals,
+        "shops": shops,
+        "encounter_rate": 0.0  # No random encounters in town
+    }
+def get_database_town_map():
+    """Database Town map data"""
+    width = 30
+    height = 30
+    tiles = [[TILE_FLOOR for _ in range(width)] for _ in range(height)]
+    
+    # Surround with walls
+    for x in range(width):
+        tiles[0][x] = TILE_WALL
+        tiles[height-1][x] = TILE_WALL
+    for y in range(height):
+        tiles[y][0] = TILE_WALL
+        tiles[y][width-1] = TILE_WALL
+    
+    # Main roads - wider and more natural
+    center_x = width // 2
+    center_y = height // 2
+    
+    # Horizontal main road (wider)
+    for x in range(1, width-1):
+        tiles[center_y][x] = TILE_ROAD
+        tiles[center_y-1][x] = TILE_ROAD
+        tiles[center_y+1][x] = TILE_ROAD
+        
+    # Vertical main road (wider)
+    for y in range(1, height-1):
+        tiles[y][center_x] = TILE_ROAD
+        tiles[y][center_x-1] = TILE_ROAD
+        tiles[y][center_x+1] = TILE_ROAD
+    
+    # Secondary roads - more natural, curved paths
+    # North area road
+    for x in range(5, width-5):
+        road_y = center_y - 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y > 2:
+                tiles[road_y-1][x] = TILE_ROAD
+    
+    # South area road
+    for x in range(5, width-5):
+        road_y = center_y + 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y < height-2:
+                tiles[road_y+1][x] = TILE_ROAD
+                
+    # East area road
+    for y in range(5, height-5):
+        road_x = center_x + 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x < width-2:
+                tiles[y][road_x+1] = TILE_ROAD
+                
+    # West area road
+    for y in range(5, height-5):
+        road_x = center_x - 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x > 2:
+                tiles[y][road_x-1] = TILE_ROAD
+    
+    # Buildings - properly enclosed with single doors
+    buildings = []
+    
+    # Create shop buildings first (to ensure they're in good locations)
+    # RDS shop building
+    rds_shop_x, rds_shop_y = 5, 5
+    rds_shop_w, rds_shop_h = 5, 5
+    
+    # Create RDS shop building
+    for bx in range(rds_shop_x, rds_shop_x+rds_shop_w):
+        for by in range(rds_shop_y, rds_shop_y+rds_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == rds_shop_x or bx == rds_shop_x+rds_shop_w-1 or by == rds_shop_y or by == rds_shop_y+rds_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to RDS shop
+    door_x = rds_shop_x + rds_shop_w//2
+    door_y = rds_shop_y + rds_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = rds_shop_x + rds_shop_w//2
+    shop_y = rds_shop_y + rds_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # DynamoDB shop building
+    dynamo_shop_x, dynamo_shop_y = 20, 5
+    dynamo_shop_w, dynamo_shop_h = 5, 5
+    
+    # Create DynamoDB shop building
+    for bx in range(dynamo_shop_x, dynamo_shop_x+dynamo_shop_w):
+        for by in range(dynamo_shop_y, dynamo_shop_y+dynamo_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == dynamo_shop_x or bx == dynamo_shop_x+dynamo_shop_w-1 or by == dynamo_shop_y or by == dynamo_shop_y+dynamo_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to DynamoDB shop
+    door_x = dynamo_shop_x + dynamo_shop_w//2
+    door_y = dynamo_shop_y + dynamo_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = dynamo_shop_x + dynamo_shop_w//2
+    shop_y = dynamo_shop_y + dynamo_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Aurora shop building
+    aurora_shop_x, aurora_shop_y = 5, 20
+    aurora_shop_w, aurora_shop_h = 5, 5
+    
+    # Create Aurora shop building
+    for bx in range(aurora_shop_x, aurora_shop_x+aurora_shop_w):
+        for by in range(aurora_shop_y, aurora_shop_y+aurora_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == aurora_shop_x or bx == aurora_shop_x+aurora_shop_w-1 or by == aurora_shop_y or by == aurora_shop_y+aurora_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to Aurora shop
+    door_x = aurora_shop_x + aurora_shop_w//2
+    door_y = aurora_shop_y + aurora_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = aurora_shop_x + aurora_shop_w//2
+    shop_y = aurora_shop_y + aurora_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Inn building
+    inn_x, inn_y = 20, 20
+    inn_w, inn_h = 6, 6
+    
+    # Create inn building
+    for bx in range(inn_x, inn_x+inn_w):
+        for by in range(inn_y, inn_y+inn_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == inn_x or bx == inn_x+inn_w-1 or by == inn_y or by == inn_y+inn_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to inn
+    door_x = inn_x + inn_w//2
+    door_y = inn_y + inn_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place inn tile inside the building
+    inn_tile_x = inn_x + inn_w//2
+    inn_tile_y = inn_y + inn_h//2
+    tiles[inn_tile_y][inn_tile_x] = TILE_INN
+    
+    # Main service buildings (for AWS services)
+    service_buildings = [
+        (12, 12, 6, 6),  # Center - RDS
+        (3, 3, 4, 4),    # Northwest corner - DynamoDB
+        (23, 3, 4, 4),   # Northeast corner - Aurora
+    ]
+    
+    for x, y, w, h in service_buildings:
+        # Create building
+        for bx in range(x, x+w):
+            for by in range(y, y+h):
+                if 1 <= bx < width-1 and 1 <= by < height-1:
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+        
+        # Add door (only one door per building)
+        door_x = x + w//2
+        door_y = y + h - 1
+        if 1 <= door_x < width-1 and 1 <= door_y < height-1:
+            tiles[door_y][door_x] = TILE_DOOR
+        
+        buildings.append((x, y, w, h))
+    
+    # Smaller houses (more of them, scattered around)
+    for _ in range(8):
+        w = random.randint(3, 4)
+        h = random.randint(3, 4)
+        x = random.randint(2, width-w-2)
+        y = random.randint(2, height-h-2)
+        
+        # Check if overlaps with roads or other buildings
+        valid = True
+        for bx in range(x-1, x+w+1):
+            for by in range(y-1, y+h+1):
+                if 0 <= bx < width and 0 <= by < height:
+                    if tiles[by][bx] in [TILE_ROAD, TILE_WALL, TILE_DOOR, TILE_SHOP, TILE_INN]:
+                        valid = False
+                        break
+        
+        if valid:
+            # Create building with proper walls
+            for bx in range(x, x+w):
+                for by in range(y, y+h):
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+            
+            # Add door (only one door per building)
+            door_x = x + w//2
+            door_y = y + h - 1
+            tiles[door_y][door_x] = TILE_DOOR
+            
+            buildings.append((x, y, w, h))
+    
+    # Decorations
+    for _ in range(5):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_FOUNTAIN
+    
+    for _ in range(10):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_BENCH
+    
+    for _ in range(15):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_LAMP
+            
+    # Portal back to world map
+    tiles[height-2][width//2] = TILE_PORTAL
+    
+    # NPCs
+    npcs = [
+        {
+            "x": 14,
+            "y": 14,
+            "name": "RDS",
+            "dialog": "Hello, I'm RDS. I provide managed relational database services. I support MySQL, PostgreSQL, MariaDB, Oracle, and SQL Server!",
+            "is_service": True,
+            "service_id": "rds"
+        },
+        {
+            "x": 5,
+            "y": 5,
+            "name": "DynamoDB",
+            "dialog": "Hi, I'm DynamoDB. I'm a NoSQL database service that provides fast and predictable performance with seamless scalability!",
+            "is_service": True,
+            "service_id": "dynamodb"
+        },
+        {
+            "x": 25,
+            "y": 5,
+            "name": "Aurora",
+            "dialog": "I'm Aurora. I'm a MySQL and PostgreSQL-compatible relational database built for the cloud. I'm up to five times faster than standard MySQL databases!",
+            "is_service": True,
+            "service_id": "aurora"
+        },
+        {
+            "x": 5,
+            "y": 25,
+            "name": "ElastiCache",
+            "dialog": "I'm ElastiCache. I make it easy to deploy, operate, and scale an in-memory cache in the cloud. I can improve the performance of your applications!",
+            "is_service": True,
+            "service_id": "elasticache"
+        },
+        {
+            "x": 25,
+            "y": 25,
+            "name": "Neptune",
+            "dialog": "I'm Neptune. I'm a fast, reliable, fully-managed graph database service. I support popular graph models and their query languages!",
+            "is_service": True,
+            "service_id": "neptune"
+        }
+    ]
+    
+    # Portal data
+    portals = [
+        {
+            "x": width//2,
+            "y": height-2,
+            "destination": "AWS Cloud World",
+            "dest_x": 10,
+            "dest_y": 11
+        }
+    ]
+    
+    # Shop data
+    shops = [
+        {
+            "x": rds_shop_x + rds_shop_w//2,
+            "y": rds_shop_y + rds_shop_h//2,
+            "name": "RDS Relational Shop",
+            "type": "items",
+            "dialog": "Welcome to RDS Relational Shop! Our items are well-structured!",
+            "items": ["sql_potion", "relation_scroll", "index_shield", "transaction_elixir"]
+        },
+        {
+            "x": dynamo_shop_x + dynamo_shop_w//2,
+            "y": dynamo_shop_y + dynamo_shop_h//2,
+            "name": "DynamoDB NoSQL Shop",
+            "type": "weapons",
+            "dialog": "Welcome to DynamoDB NoSQL Shop! Our weapons scale infinitely!",
+            "items": ["nosql_sword", "document_dagger", "key_value_axe", "partition_staff"]
+        },
+        {
+            "x": aurora_shop_x + aurora_shop_w//2,
+            "y": aurora_shop_y + aurora_shop_h//2,
+            "name": "Aurora Equipment",
+            "type": "armor",
+            "dialog": "Welcome to Aurora Equipment! Our armor is compatible with all your needs!",
+            "items": ["mysql_shield", "postgres_helmet", "cluster_breastplate", "replica_boots"]
+        }
+    ]
+    
+    # Return map data
+    return {
+        "name": "Database Town",
+        "width": width,
+        "height": height,
+        "tiles": tiles,
+        "npcs": npcs,
+        "portals": portals,
+        "shops": shops,
+        "encounter_rate": 0.0  # No random encounters in town
+    }
+def get_security_town_map():
+    """Security Town map data"""
+    width = 30
+    height = 30
+    tiles = [[TILE_FLOOR for _ in range(width)] for _ in range(height)]
+    
+    # Surround with walls
+    for x in range(width):
+        tiles[0][x] = TILE_WALL
+        tiles[height-1][x] = TILE_WALL
+    for y in range(height):
+        tiles[y][0] = TILE_WALL
+        tiles[y][width-1] = TILE_WALL
+    
+    # Main roads - wider and more natural
+    center_x = width // 2
+    center_y = height // 2
+    
+    # Horizontal main road (wider)
+    for x in range(1, width-1):
+        tiles[center_y][x] = TILE_ROAD
+        tiles[center_y-1][x] = TILE_ROAD
+        tiles[center_y+1][x] = TILE_ROAD
+        
+    # Vertical main road (wider)
+    for y in range(1, height-1):
+        tiles[y][center_x] = TILE_ROAD
+        tiles[y][center_x-1] = TILE_ROAD
+        tiles[y][center_x+1] = TILE_ROAD
+    
+    # Secondary roads - more natural, curved paths
+    # North area road
+    for x in range(5, width-5):
+        road_y = center_y - 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y > 2:
+                tiles[road_y-1][x] = TILE_ROAD
+    
+    # South area road
+    for x in range(5, width-5):
+        road_y = center_y + 6
+        if 1 <= road_y < height-1:
+            tiles[road_y][x] = TILE_ROAD
+            # Add some variation
+            if x % 5 == 0 and road_y < height-2:
+                tiles[road_y+1][x] = TILE_ROAD
+                
+    # East area road
+    for y in range(5, height-5):
+        road_x = center_x + 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x < width-2:
+                tiles[y][road_x+1] = TILE_ROAD
+                
+    # West area road
+    for y in range(5, height-5):
+        road_x = center_x - 6
+        if 1 <= road_x < width-1:
+            tiles[y][road_x] = TILE_ROAD
+            # Add some variation
+            if y % 5 == 0 and road_x > 2:
+                tiles[y][road_x-1] = TILE_ROAD
+    
+    # Buildings - properly enclosed with single doors
+    buildings = []
+    
+    # Create shop buildings first (to ensure they're in good locations)
+    # IAM shop building
+    iam_shop_x, iam_shop_y = 5, 5
+    iam_shop_w, iam_shop_h = 5, 5
+    
+    # Create IAM shop building
+    for bx in range(iam_shop_x, iam_shop_x+iam_shop_w):
+        for by in range(iam_shop_y, iam_shop_y+iam_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == iam_shop_x or bx == iam_shop_x+iam_shop_w-1 or by == iam_shop_y or by == iam_shop_y+iam_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to IAM shop
+    door_x = iam_shop_x + iam_shop_w//2
+    door_y = iam_shop_y + iam_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = iam_shop_x + iam_shop_w//2
+    shop_y = iam_shop_y + iam_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # WAF shop building
+    waf_shop_x, waf_shop_y = 20, 5
+    waf_shop_w, waf_shop_h = 5, 5
+    
+    # Create WAF shop building
+    for bx in range(waf_shop_x, waf_shop_x+waf_shop_w):
+        for by in range(waf_shop_y, waf_shop_y+waf_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == waf_shop_x or bx == waf_shop_x+waf_shop_w-1 or by == waf_shop_y or by == waf_shop_y+waf_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to WAF shop
+    door_x = waf_shop_x + waf_shop_w//2
+    door_y = waf_shop_y + waf_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = waf_shop_x + waf_shop_w//2
+    shop_y = waf_shop_y + waf_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Shield shop building
+    shield_shop_x, shield_shop_y = 5, 20
+    shield_shop_w, shield_shop_h = 5, 5
+    
+    # Create Shield shop building
+    for bx in range(shield_shop_x, shield_shop_x+shield_shop_w):
+        for by in range(shield_shop_y, shield_shop_y+shield_shop_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == shield_shop_x or bx == shield_shop_x+shield_shop_w-1 or by == shield_shop_y or by == shield_shop_y+shield_shop_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to Shield shop
+    door_x = shield_shop_x + shield_shop_w//2
+    door_y = shield_shop_y + shield_shop_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place shop tile inside the building
+    shop_x = shield_shop_x + shield_shop_w//2
+    shop_y = shield_shop_y + shield_shop_h//2
+    tiles[shop_y][shop_x] = TILE_SHOP
+    
+    # Inn building
+    inn_x, inn_y = 20, 20
+    inn_w, inn_h = 6, 6
+    
+    # Create inn building
+    for bx in range(inn_x, inn_x+inn_w):
+        for by in range(inn_y, inn_y+inn_h):
+            if 1 <= bx < width-1 and 1 <= by < height-1:
+                if bx == inn_x or bx == inn_x+inn_w-1 or by == inn_y or by == inn_y+inn_h-1:
+                    tiles[by][bx] = TILE_WALL
+                else:
+                    tiles[by][bx] = TILE_FLOOR
+    
+    # Add door to inn
+    door_x = inn_x + inn_w//2
+    door_y = inn_y + inn_h - 1
+    tiles[door_y][door_x] = TILE_DOOR
+    
+    # Place inn tile inside the building
+    inn_tile_x = inn_x + inn_w//2
+    inn_tile_y = inn_y + inn_h//2
+    tiles[inn_tile_y][inn_tile_x] = TILE_INN
+    
+    # Main service buildings (for AWS services)
+    service_buildings = [
+        (12, 12, 6, 6),  # Center - IAM
+        (3, 3, 4, 4),    # Northwest corner - WAF
+        (23, 3, 4, 4),   # Northeast corner - Shield
+    ]
+    
+    for x, y, w, h in service_buildings:
+        # Create building
+        for bx in range(x, x+w):
+            for by in range(y, y+h):
+                if 1 <= bx < width-1 and 1 <= by < height-1:
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+        
+        # Add door (only one door per building)
+        door_x = x + w//2
+        door_y = y + h - 1
+        if 1 <= door_x < width-1 and 1 <= door_y < height-1:
+            tiles[door_y][door_x] = TILE_DOOR
+        
+        buildings.append((x, y, w, h))
+    
+    # Smaller houses (more of them, scattered around)
+    for _ in range(8):
+        w = random.randint(3, 4)
+        h = random.randint(3, 4)
+        x = random.randint(2, width-w-2)
+        y = random.randint(2, height-h-2)
+        
+        # Check if overlaps with roads or other buildings
+        valid = True
+        for bx in range(x-1, x+w+1):
+            for by in range(y-1, y+h+1):
+                if 0 <= bx < width and 0 <= by < height:
+                    if tiles[by][bx] in [TILE_ROAD, TILE_WALL, TILE_DOOR, TILE_SHOP, TILE_INN]:
+                        valid = False
+                        break
+        
+        if valid:
+            # Create building with proper walls
+            for bx in range(x, x+w):
+                for by in range(y, y+h):
+                    if bx == x or bx == x+w-1 or by == y or by == y+h-1:
+                        tiles[by][bx] = TILE_WALL
+                    else:
+                        tiles[by][bx] = TILE_FLOOR
+            
+            # Add door (only one door per building)
+            door_x = x + w//2
+            door_y = y + h - 1
+            tiles[door_y][door_x] = TILE_DOOR
+            
+            buildings.append((x, y, w, h))
+    
+    # Decorations
+    for _ in range(5):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_FOUNTAIN
+    
+    for _ in range(10):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_BENCH
+    
+    for _ in range(15):
+        x = random.randint(1, width-2)
+        y = random.randint(1, height-2)
+        if tiles[y][x] == TILE_ROAD:
+            tiles[y][x] = TILE_LAMP
+            
+    # Portal back to world map
+    tiles[height-2][width//2] = TILE_PORTAL
+    
+    # NPCs
+    npcs = [
+        {
+            "x": 14,
+            "y": 14,
+            "name": "IAM",
+            "dialog": "Hello, I'm IAM. I help you securely control access to AWS resources. I manage permissions that determine which actions users can perform.",
+            "is_service": True,
+            "service_id": "iam"
+        },
+        {
+            "x": 5,
+            "y": 5,
+            "name": "WAF",
+            "dialog": "Hi, I'm WAF. I protect your web applications from common web exploits that could affect application availability or compromise security.",
+            "is_service": True,
+            "service_id": "waf"
+        },
+        {
+            "x": 25,
+            "y": 5,
+            "name": "Shield",
+            "dialog": "I'm Shield. I provide protection against DDoS attacks. I safeguard your applications running on AWS.",
+            "is_service": True,
+            "service_id": "shield"
+        },
+        {
+            "x": 5,
+            "y": 25,
+            "name": "GuardDuty",
+            "dialog": "I'm GuardDuty. I'm a threat detection service that continuously monitors for malicious activity and unauthorized behavior.",
+            "is_service": True,
+            "service_id": "guardduty"
+        },
+        {
+            "x": 25,
+            "y": 25,
+            "name": "Macie",
+            "dialog": "I'm Macie. I use machine learning to automatically discover, classify, and protect sensitive data stored in S3.",
+            "is_service": True,
+            "service_id": "macie"
+        }
+    ]
+    
+    # Portal data
+    portals = [
+        {
+            "x": width//2,
+            "y": height-2,
+            "destination": "AWS Cloud World",
+            "dest_x": 40,
+            "dest_y": 39
+        }
+    ]
+    
+    # Shop data
+    shops = [
+        {
+            "x": iam_shop_x + iam_shop_w//2,
+            "y": iam_shop_y + iam_shop_h//2,
+            "name": "IAM Identity Shop",
+            "type": "items",
+            "dialog": "Welcome to IAM Identity Shop! Our items will protect your identity!",
+            "items": ["role_potion", "policy_scroll", "permission_shield", "identity_elixir"]
+        },
+        {
+            "x": waf_shop_x + waf_shop_w//2,
+            "y": waf_shop_y + waf_shop_h//2,
+            "name": "WAF Weapons",
+            "type": "weapons",
+            "dialog": "Welcome to WAF Weapons! Our weapons will protect your applications!",
+            "items": ["firewall_sword", "rule_dagger", "filter_axe", "protection_staff"]
+        },
+        {
+            "x": shield_shop_x + shield_shop_w//2,
+            "y": shield_shop_y + shield_shop_h//2,
+            "name": "Shield Armory",
+            "type": "armor",
+            "dialog": "Welcome to Shield Armory! Our armor will protect you from any attack!",
+            "items": ["ddos_shield", "protection_helmet", "advanced_breastplate", "standard_boots"]
+        }
+    ]
+    
+    # Return map data
+    return {
+        "name": "Security Town",
+        "width": width,
+        "height": height,
+        "tiles": tiles,
+        "npcs": npcs,
+        "portals": portals,
+        "shops": shops,
+        "encounter_rate": 0.0  # No random encounters in town
+    }

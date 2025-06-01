@@ -165,10 +165,18 @@ AWS_SERVICES = {
 
 def get_service_by_name(name):
     """サービス名からサービスデータを取得"""
-    name_lower = name.lower()
-    if name_lower in AWS_SERVICES:
-        return AWS_SERVICES[name_lower].copy()
-    return None
+    try:
+        name_lower = name.lower()
+        print(f"get_service_by_name: {name_lower}")
+        if name_lower in AWS_SERVICES:
+            print(f"サービスが見つかりました: {name_lower}")
+            return AWS_SERVICES[name_lower].copy()
+        print(f"サービスが見つかりませんでした: {name_lower}")
+        print(f"利用可能なサービス: {list(AWS_SERVICES.keys())}")
+        return None
+    except Exception as e:
+        print(f"get_service_by_nameでエラー: {e}")
+        return None
 
 def get_all_services():
     """すべてのサービスのリストを取得"""

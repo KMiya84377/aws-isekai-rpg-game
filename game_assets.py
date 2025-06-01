@@ -27,44 +27,73 @@ class GameAssets:
         self.load_assets()
         
     def load_assets(self):
-        """ゲームアセットをロードする"""
-        # フォントの読み込み
+        """Load game assets"""
+        # Load fonts
         self.fonts["small"] = pygame.font.SysFont(None, 24)
         self.fonts["normal"] = pygame.font.SysFont(None, 32)
         self.fonts["large"] = pygame.font.SysFont(None, 48)
         
-        # 町のオブジェクト用の追加アセット
+        # Town objects
         self.town_objects = {}
-        # プレイヤー画像の作成（人間のピクセルアート）
+        
+        # Create enhanced player image (more detailed pixel art)
         player_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        # 頭
+        # Head with more detail
         pygame.draw.circle(player_surface, (255, 220, 180), (TILE_SIZE//2, TILE_SIZE//4), TILE_SIZE//6)
-        # 髪の毛
+        # Hair with more style
         pygame.draw.arc(player_surface, (50, 50, 50), 
                       (TILE_SIZE//2 - TILE_SIZE//6, TILE_SIZE//4 - TILE_SIZE//6, 
                        TILE_SIZE//3, TILE_SIZE//3), 0, math.pi, 3)
-        # 目
+        pygame.draw.rect(player_surface, (50, 50, 50),
+                       (TILE_SIZE//2 - TILE_SIZE//6, TILE_SIZE//4 - TILE_SIZE//6,
+                        TILE_SIZE//3, TILE_SIZE//8))
+        # Eyes with more detail
         pygame.draw.circle(player_surface, (255, 255, 255), 
                          (TILE_SIZE//2 - TILE_SIZE//12, TILE_SIZE//4), TILE_SIZE//20)
         pygame.draw.circle(player_surface, (255, 255, 255), 
                          (TILE_SIZE//2 + TILE_SIZE//12, TILE_SIZE//4), TILE_SIZE//20)
-        pygame.draw.circle(player_surface, (0, 0, 0), 
+        pygame.draw.circle(player_surface, (0, 100, 255), 
                          (TILE_SIZE//2 - TILE_SIZE//12, TILE_SIZE//4), TILE_SIZE//40)
-        pygame.draw.circle(player_surface, (0, 0, 0), 
+        pygame.draw.circle(player_surface, (0, 100, 255), 
                          (TILE_SIZE//2 + TILE_SIZE//12, TILE_SIZE//4), TILE_SIZE//40)
-        # 体
-        pygame.draw.rect(player_surface, (70, 130, 230), 
+        # Mouth
+        pygame.draw.arc(player_surface, (200, 100, 100),
+                      (TILE_SIZE//2 - TILE_SIZE//12, TILE_SIZE//4 + TILE_SIZE//20,
+                       TILE_SIZE//6, TILE_SIZE//12), 0, math.pi, 2)
+        # Body with more detail - add a jacket
+        pygame.draw.rect(player_surface, (30, 100, 200), 
                         (TILE_SIZE//3, TILE_SIZE//3, TILE_SIZE//3, TILE_SIZE//2))
-        # 腕と足
-        pygame.draw.rect(player_surface, (70, 130, 230), 
+        # Add jacket details
+        pygame.draw.line(player_surface, (20, 70, 150),
+                       (TILE_SIZE//3, TILE_SIZE//3 + TILE_SIZE//6),
+                       (TILE_SIZE*2//3, TILE_SIZE//3 + TILE_SIZE//6), 2)
+        # Add a tie
+        pygame.draw.polygon(player_surface, (200, 50, 50),
+                          [(TILE_SIZE//2, TILE_SIZE//3),
+                           (TILE_SIZE//2 - TILE_SIZE//12, TILE_SIZE//3 + TILE_SIZE//12),
+                           (TILE_SIZE//2, TILE_SIZE//3 + TILE_SIZE//4),
+                           (TILE_SIZE//2 + TILE_SIZE//12, TILE_SIZE//3 + TILE_SIZE//12)])
+        # Arms with more detail
+        pygame.draw.rect(player_surface, (30, 100, 200), 
                         (TILE_SIZE//6, TILE_SIZE//3, TILE_SIZE//6, TILE_SIZE//2))
-        pygame.draw.rect(player_surface, (70, 130, 230), 
+        pygame.draw.rect(player_surface, (30, 100, 200), 
                         (TILE_SIZE*2//3, TILE_SIZE//3, TILE_SIZE//6, TILE_SIZE//2))
-        # 靴
-        pygame.draw.rect(player_surface, (120, 100, 80), 
-                        (TILE_SIZE//4, TILE_SIZE*3//4, TILE_SIZE//5, TILE_SIZE//4))
-        pygame.draw.rect(player_surface, (120, 100, 80), 
-                        (TILE_SIZE*3//5, TILE_SIZE*3//4, TILE_SIZE//5, TILE_SIZE//4))
+        # Hands
+        pygame.draw.circle(player_surface, (255, 220, 180),
+                         (TILE_SIZE//6 + TILE_SIZE//12, TILE_SIZE//3 + TILE_SIZE//2), TILE_SIZE//12)
+        pygame.draw.circle(player_surface, (255, 220, 180),
+                         (TILE_SIZE*2//3 + TILE_SIZE//12, TILE_SIZE//3 + TILE_SIZE//2), TILE_SIZE//12)
+        # Legs with more detail
+        pygame.draw.rect(player_surface, (50, 50, 100), 
+                        (TILE_SIZE//3, TILE_SIZE*5//6, TILE_SIZE//6, TILE_SIZE//6))
+        pygame.draw.rect(player_surface, (50, 50, 100), 
+                        (TILE_SIZE//2, TILE_SIZE*5//6, TILE_SIZE//6, TILE_SIZE//6))
+        # Shoes with more detail
+        pygame.draw.rect(player_surface, (40, 40, 40), 
+                        (TILE_SIZE//4, TILE_SIZE*5//6 + TILE_SIZE//12, TILE_SIZE//5, TILE_SIZE//8))
+        pygame.draw.rect(player_surface, (40, 40, 40), 
+                        (TILE_SIZE*3//5, TILE_SIZE*5//6 + TILE_SIZE//12, TILE_SIZE//5, TILE_SIZE//8))
+        
         self.images["player"] = player_surface
         
         # マップタイルの作成
@@ -299,52 +328,173 @@ class GameAssets:
         # AWSサービスキャラクター
         # EC2
         ec2_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        # 背景（オレンジ色の四角）
-        pygame.draw.rect(ec2_surface, (255, 153, 0), (5, 5, TILE_SIZE-10, TILE_SIZE-10))
+        # Background (orange square with gradient)
+        for y in range(5, TILE_SIZE-5):
+            for x in range(5, TILE_SIZE-5):
+                distance = ((x - TILE_SIZE//2)**2 + (y - TILE_SIZE//2)**2)**0.5
+                intensity = max(0, 255 - distance * 5)
+                pygame.draw.rect(ec2_surface, (255, min(153 + intensity//4, 255), intensity//3), (x, y, 1, 1))
         pygame.draw.rect(ec2_surface, BLACK, (5, 5, TILE_SIZE-10, TILE_SIZE-10), 2)
-        # EC2のロゴ風デザイン（サーバーアイコン）
-        pygame.draw.rect(ec2_surface, (255, 255, 255), (10, 12, TILE_SIZE-20, TILE_SIZE-24))
+        
+        # EC2 logo design (server with glowing effect)
+        server_rect = pygame.Rect(10, 12, TILE_SIZE-20, TILE_SIZE-24)
+        pygame.draw.rect(ec2_surface, (255, 255, 255), server_rect)
         pygame.draw.rect(ec2_surface, (255, 153, 0), (10, 12, TILE_SIZE-20, 5))
-        # サーバーのディテール
+        
+        # Server details with lights
         for i in range(3):
-            pygame.draw.line(ec2_surface, (200, 200, 200), 
-                           (15, 22 + i*8), (TILE_SIZE-15, 22 + i*8), 1)
+            pygame.draw.rect(ec2_surface, (200, 200, 200), (15, 22 + i*8, TILE_SIZE-30, 3))
+            # Add blinking lights
+            pygame.draw.circle(ec2_surface, (0, 255, 0), (TILE_SIZE-18, 23 + i*8), 2)
+            pygame.draw.circle(ec2_surface, (255, 0, 0), (TILE_SIZE-13, 23 + i*8), 2)
+        
+        # Add a face to EC2
+        # Eyes
+        pygame.draw.circle(ec2_surface, (0, 0, 0), (TILE_SIZE//3, TILE_SIZE//2), 3)
+        pygame.draw.circle(ec2_surface, (0, 0, 0), (TILE_SIZE*2//3, TILE_SIZE//2), 3)
+        # Smile
+        pygame.draw.arc(ec2_surface, (0, 0, 0), 
+                      (TILE_SIZE//3, TILE_SIZE//2, TILE_SIZE//3, TILE_SIZE//4), 0, math.pi, 2)
+        
+        # Add a glow effect
+        glow = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        for radius in range(3):
+            pygame.draw.rect(glow, (255, 200, 100, 50 - radius * 15), 
+                           (5 - radius, 5 - radius, TILE_SIZE - 10 + radius * 2, TILE_SIZE - 10 + radius * 2), 1)
+        ec2_surface.blit(glow, (0, 0))
+        
         self.images["ec2"] = ec2_surface
         
         # S3
         s3_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        # 背景（緑色の四角）
-        pygame.draw.rect(s3_surface, (0, 153, 102), (5, 5, TILE_SIZE-10, TILE_SIZE-10))
+        # Background (green square with gradient)
+        for y in range(5, TILE_SIZE-5):
+            for x in range(5, TILE_SIZE-5):
+                distance = ((x - TILE_SIZE//2)**2 + (y - TILE_SIZE//2)**2)**0.5
+                intensity = max(0, 255 - distance * 5)
+                pygame.draw.rect(s3_surface, (0, min(153 + intensity//4, 255), min(102 + intensity//3, 255)), (x, y, 1, 1))
         pygame.draw.rect(s3_surface, BLACK, (5, 5, TILE_SIZE-10, TILE_SIZE-10), 2)
-        # S3のロゴ風デザイン（バケットアイコン）
-        pygame.draw.polygon(s3_surface, (255, 255, 255), 
-                          [(15, 15), (TILE_SIZE-15, 15), (TILE_SIZE-10, TILE_SIZE-15), (10, TILE_SIZE-15)])
-        # バケットのディテール
+        
+        # S3 logo design (bucket with 3D effect)
+        bucket_points = [(15, 15), (TILE_SIZE-15, 15), (TILE_SIZE-10, TILE_SIZE-15), (10, TILE_SIZE-15)]
+        pygame.draw.polygon(s3_surface, (255, 255, 255), bucket_points)
+        # Add 3D effect
+        pygame.draw.polygon(s3_surface, (220, 220, 220), 
+                          [(TILE_SIZE-15, 15), (TILE_SIZE-10, TILE_SIZE-15), (TILE_SIZE-15, TILE_SIZE-15), (TILE_SIZE-20, 15)])
+        
+        # Bucket details
         pygame.draw.line(s3_surface, (0, 153, 102), (15, 25), (TILE_SIZE-15, 25), 2)
+        # Add water in bucket
+        water_points = [(15, TILE_SIZE-25), (TILE_SIZE-15, TILE_SIZE-25), (TILE_SIZE-12, TILE_SIZE-15), (12, TILE_SIZE-15)]
+        pygame.draw.polygon(s3_surface, (100, 200, 255), water_points)
+        # Add ripples
+        pygame.draw.arc(s3_surface, (150, 220, 255), 
+                      (20, TILE_SIZE-30, 15, 10), 0, math.pi, 2)
+        pygame.draw.arc(s3_surface, (150, 220, 255), 
+                      (TILE_SIZE-35, TILE_SIZE-30, 15, 10), 0, math.pi, 2)
+        
+        # Add a face to S3
+        # Eyes
+        pygame.draw.circle(s3_surface, (0, 0, 0), (TILE_SIZE//3, TILE_SIZE//2), 3)
+        pygame.draw.circle(s3_surface, (0, 0, 0), (TILE_SIZE*2//3, TILE_SIZE//2), 3)
+        # Smile
+        pygame.draw.arc(s3_surface, (0, 0, 0), 
+                      (TILE_SIZE//3, TILE_SIZE//2, TILE_SIZE//3, TILE_SIZE//4), 0, math.pi, 2)
+        
         self.images["s3"] = s3_surface
         
         # Lambda
         lambda_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        # 背景（紫色の四角）
-        pygame.draw.rect(lambda_surface, (153, 51, 255), (5, 5, TILE_SIZE-10, TILE_SIZE-10))
+        # Background (purple square with gradient)
+        for y in range(5, TILE_SIZE-5):
+            for x in range(5, TILE_SIZE-5):
+                distance = ((x - TILE_SIZE//2)**2 + (y - TILE_SIZE//2)**2)**0.5
+                intensity = max(0, 255 - distance * 5)
+                pygame.draw.rect(lambda_surface, (min(153 + intensity//4, 255), 51, min(255, 255 - intensity//3)), (x, y, 1, 1))
         pygame.draw.rect(lambda_surface, BLACK, (5, 5, TILE_SIZE-10, TILE_SIZE-10), 2)
-        # Lambdaのロゴ風デザイン（λ文字）
+        
+        # Lambda logo design (λ character with glow effect)
+        # Create a glow effect
+        for i in range(3):
+            pygame.draw.line(lambda_surface, (200 + i*15, 200 + i*15, 255), 
+                           (15 - i, TILE_SIZE-15 + i), (TILE_SIZE//2 + i, 15 - i), 3 - i)
+            pygame.draw.line(lambda_surface, (200 + i*15, 200 + i*15, 255), 
+                           (TILE_SIZE//2 - i, 15 + i), (TILE_SIZE-15 + i, TILE_SIZE-15 - i), 3 - i)
+        
+        # Main lambda character
         pygame.draw.line(lambda_surface, (255, 255, 255), (15, TILE_SIZE-15), (TILE_SIZE//2, 15), 3)
         pygame.draw.line(lambda_surface, (255, 255, 255), (TILE_SIZE//2, 15), (TILE_SIZE-15, TILE_SIZE-15), 3)
+        
+        # Add a face to Lambda
+        # Eyes
+        pygame.draw.circle(lambda_surface, (255, 255, 255), (TILE_SIZE//3, TILE_SIZE*2//3), 3)
+        pygame.draw.circle(lambda_surface, (255, 255, 255), (TILE_SIZE*2//3, TILE_SIZE*2//3), 3)
+        pygame.draw.circle(lambda_surface, (0, 0, 0), (TILE_SIZE//3, TILE_SIZE*2//3), 1)
+        pygame.draw.circle(lambda_surface, (0, 0, 0), (TILE_SIZE*2//3, TILE_SIZE*2//3), 1)
+        # Smile
+        pygame.draw.arc(lambda_surface, (255, 255, 255), 
+                      (TILE_SIZE//3, TILE_SIZE*2//3, TILE_SIZE//3, TILE_SIZE//6), 0, math.pi, 2)
+        
+        # Add code-like particles
+        for _ in range(5):
+            x = random.randint(10, TILE_SIZE-10)
+            y = random.randint(10, TILE_SIZE-10)
+            size = random.randint(2, 4)
+            pygame.draw.rect(lambda_surface, (255, 255, 255, 150), (x, y, size, size))
+        
         self.images["lambda"] = lambda_surface
         
         # DynamoDB
         dynamodb_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        # 背景（青色の四角）
-        pygame.draw.rect(dynamodb_surface, (0, 102, 204), (5, 5, TILE_SIZE-10, TILE_SIZE-10))
+        # Background (blue square with gradient)
+        for y in range(5, TILE_SIZE-5):
+            for x in range(5, TILE_SIZE-5):
+                distance = ((x - TILE_SIZE//2)**2 + (y - TILE_SIZE//2)**2)**0.5
+                intensity = max(0, 255 - distance * 5)
+                pygame.draw.rect(dynamodb_surface, (0, min(102 + intensity//4, 255), min(204 + intensity//3, 255)), (x, y, 1, 1))
         pygame.draw.rect(dynamodb_surface, BLACK, (5, 5, TILE_SIZE-10, TILE_SIZE-10), 2)
-        # DynamoDBのロゴ風デザイン（テーブルアイコン）
+        
+        # DynamoDB logo design (table with 3D effect)
+        # Table top
         pygame.draw.rect(dynamodb_surface, (255, 255, 255), (10, 15, TILE_SIZE-20, 5))
-        pygame.draw.rect(dynamodb_surface, (255, 255, 255), (10, TILE_SIZE//2-2, TILE_SIZE-20, 4))
+        # Table middle
+        pygame.draw.rect(dynamodb_surface, (230, 230, 255), (10, TILE_SIZE//2-2, TILE_SIZE-20, 4))
+        # Table bottom
         pygame.draw.rect(dynamodb_surface, (255, 255, 255), (10, TILE_SIZE-20, TILE_SIZE-20, 5))
-        # 縦線
+        
+        # 3D effect for table
+        pygame.draw.polygon(dynamodb_surface, (200, 200, 255), 
+                          [(10, 15), (10, 20), (5, 25), (5, 20)])
+        pygame.draw.polygon(dynamodb_surface, (200, 200, 255), 
+                          [(TILE_SIZE-10, 15), (TILE_SIZE-10, 20), (TILE_SIZE-5, 25), (TILE_SIZE-5, 20)])
+        
+        # Vertical lines with data visualization
         pygame.draw.line(dynamodb_surface, (255, 255, 255), (TILE_SIZE//3, 15), (TILE_SIZE//3, TILE_SIZE-15), 2)
         pygame.draw.line(dynamodb_surface, (255, 255, 255), (TILE_SIZE*2//3, 15), (TILE_SIZE*2//3, TILE_SIZE-15), 2)
+        
+        # Add data visualization elements
+        for i in range(3):
+            # Bar charts
+            height = random.randint(5, 15)
+            pygame.draw.rect(dynamodb_surface, (100, 200, 255), 
+                           (TILE_SIZE//6, TILE_SIZE//2 + 10 + i*8, TILE_SIZE//6, height))
+            height = random.randint(5, 15)
+            pygame.draw.rect(dynamodb_surface, (100, 200, 255), 
+                           (TILE_SIZE//2, TILE_SIZE//2 + 10 + i*8, TILE_SIZE//6, height))
+            height = random.randint(5, 15)
+            pygame.draw.rect(dynamodb_surface, (100, 200, 255), 
+                           (TILE_SIZE*5//6 - TILE_SIZE//6, TILE_SIZE//2 + 10 + i*8, TILE_SIZE//6, height))
+        
+        # Add a face to DynamoDB
+        # Eyes
+        pygame.draw.circle(dynamodb_surface, (255, 255, 255), (TILE_SIZE//3, TILE_SIZE//3), 3)
+        pygame.draw.circle(dynamodb_surface, (255, 255, 255), (TILE_SIZE*2//3, TILE_SIZE//3), 3)
+        pygame.draw.circle(dynamodb_surface, (0, 0, 0), (TILE_SIZE//3, TILE_SIZE//3), 1)
+        pygame.draw.circle(dynamodb_surface, (0, 0, 0), (TILE_SIZE*2//3, TILE_SIZE//3), 1)
+        # Smile
+        pygame.draw.arc(dynamodb_surface, (255, 255, 255), 
+                      (TILE_SIZE//3, TILE_SIZE//3, TILE_SIZE//3, TILE_SIZE//6), 0, math.pi, 2)
+        
         self.images["dynamodb"] = dynamodb_surface
         
         # RDS
@@ -727,3 +877,17 @@ class GameAssets:
             pygame.draw.line(door_tile, (80, 50, 20), 
                            (TILE_SIZE*3//4, 5 + i*10), (TILE_SIZE*3//4, 15 + i*10), 2)
         self.images["door"] = door_tile
+        # Inn icon (based on shop icon but with different colors and bed symbol)
+        inn_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+        # Background (blue square)
+        pygame.draw.rect(inn_surface, (51, 102, 153), (5, 5, TILE_SIZE-10, TILE_SIZE-10))
+        pygame.draw.rect(inn_surface, BLACK, (5, 5, TILE_SIZE-10, TILE_SIZE-10), 2)
+        # Inn icon (bed)
+        pygame.draw.rect(inn_surface, (255, 255, 255), (10, TILE_SIZE//2-5, TILE_SIZE-20, TILE_SIZE//3))
+        pygame.draw.rect(inn_surface, (200, 200, 255), (10, TILE_SIZE//2-5, TILE_SIZE-20, 5))
+        # Pillow
+        pygame.draw.rect(inn_surface, (220, 220, 255), (12, TILE_SIZE//2-3, 8, 8))
+        # Zzz symbol for sleep
+        text = pygame.font.SysFont(None, 20).render("Zzz", True, (255, 255, 255))
+        inn_surface.blit(text, (TILE_SIZE//2, TILE_SIZE//4))
+        self.images["inn"] = inn_surface

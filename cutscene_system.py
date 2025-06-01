@@ -61,131 +61,131 @@ class CutsceneSystem:
         self.text_display_progress = 0
         
     def create_opening_sequence(self):
-        """オープニングシーケンスを作成"""
+        """Create the opening sequence"""
         return [
             {
                 "background": "office_bg",
-                "text": "とある企業のオフィスにて...",
+                "text": "In a corporate office somewhere...",
                 "character": None
             },
             {
                 "background": "office_bg",
-                "text": "「このプロジェクト、納期に間に合わせないと...」",
+                "text": "\"I need to meet this project deadline somehow...\"",
                 "character": "player"
             },
             {
                 "background": "office_bg",
-                "text": "新人エンジニアは100日間徹夜を続けていた。",
+                "text": "The rookie engineer had been working for 100 days straight.",
                 "character": None
             },
             {
                 "background": "office_bg",
-                "text": "「もう...限界...」",
+                "text": "\"I've reached... my limit...\"",
                 "character": "player"
             },
             {
                 "background": "office_bg",
-                "text": "その時、モニターから謎の光が溢れ出した。",
+                "text": "Suddenly, a mysterious light began to emanate from the monitor.",
                 "character": None
             },
             {
                 "background": "light_bg",
-                "text": "「な、なんだ!?」",
+                "text": "\"What's happening!?\"",
                 "character": "player"
             },
             {
                 "background": "light_bg",
-                "text": "光に包まれ、意識が遠のいていく...",
+                "text": "Enveloped in light, consciousness began to fade...",
                 "character": None
             },
             {
                 "background": "aws_world_bg",
-                "text": "目を覚ますと、そこは見知らぬ世界だった。",
+                "text": "Upon awakening, an unfamiliar world appeared.",
                 "character": None
             },
             {
                 "background": "aws_world_bg",
-                "text": "「ここは...どこだ？」",
+                "text": "\"Where... am I?\"",
                 "character": "player"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「ようこそ、AWSクラウド世界へ。あなたは異世界から来たようですね。」",
+                "text": "\"Welcome to the AWS Cloud World. You seem to have come from another world.\"",
                 "character": "ec2"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「AWSクラウド世界？まさか、あのAmazon Web Servicesの？」",
+                "text": "\"AWS Cloud World? You mean Amazon Web Services?\"",
                 "character": "player"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「そうです。私はEC2、この世界のコンピューティング町の住人です。」",
+                "text": "\"That's right. I'm EC2, a resident of Computing Town in this world.\"",
                 "character": "ec2"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「この世界は今、セキュリティ脆弱性という敵に襲われています。」",
+                "text": "\"This world is currently under attack by security vulnerabilities.\"",
                 "character": "ec2"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「あなたが持つ知識が、この世界を救う鍵になるかもしれません。」",
+                "text": "\"Your knowledge might be the key to saving our world.\"",
                 "character": "ec2"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「まずはComputing Townに来てください。そこで詳しく説明します。」",
+                "text": "\"Please come to Computing Town. I'll explain everything in detail there.\"",
                 "character": "ec2"
             }
         ]
         
     def create_ending_sequence(self):
-        """エンディングシーケンスを作成"""
+        """Create the ending sequence"""
         return [
             {
                 "background": "battle_bg",
-                "text": "DDoS攻撃が倒れ、世界に平和が戻った。",
+                "text": "The DDoS attack was defeated, and peace returned to the world.",
                 "character": None
             },
             {
                 "background": "aws_world_bg",
-                "text": "「君のおかげで世界は救われた。本当にありがとう。」",
+                "text": "\"Thanks to you, our world has been saved. Thank you so much.\"",
                 "character": "ec2"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「いや、みんなの力があったからこそだ。」",
+                "text": "\"No, it was only possible because of everyone's help.\"",
                 "character": "player"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「元の世界に戻る時が来たようだね。」",
+                "text": "\"It seems like it's time for you to return to your world.\"",
                 "character": "s3"
             },
             {
                 "background": "aws_world_bg",
-                "text": "「ああ、でもこの世界で学んだことは一生の宝物だ。」",
+                "text": "\"Yes, but the knowledge I've gained in this world will be my treasure forever.\"",
                 "character": "player"
             },
             {
                 "background": "light_bg",
-                "text": "主人公は再び光に包まれ、元の世界へと戻っていった。",
+                "text": "The hero was once again enveloped in light, returning to the original world.",
                 "character": None
             },
             {
                 "background": "office_bg",
-                "text": "目を覚ますと、オフィスのデスクで眠っていた。",
+                "text": "Upon awakening, they found themselves asleep at their office desk.",
                 "character": None
             },
             {
                 "background": "office_bg",
-                "text": "「不思議な夢を見たな...でも、なぜかAWSの知識がすごく頭に入っている...」",
+                "text": "\"What a strange dream... but somehow, I understand AWS much better now...\"",
                 "character": "player"
             },
             {
                 "background": "office_bg",
-                "text": "その日から、主人公は一流のクラウドエンジニアとして活躍するのであった。",
+                "text": "From that day forward, the hero thrived as a top-tier cloud engineer.",
                 "character": None
             },
             {
